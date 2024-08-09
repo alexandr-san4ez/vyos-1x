@@ -700,15 +700,6 @@ def reset_profile_dst(profile: str, tunnel: str, nbma_dst: str):
                     ]
                 )
             )
-            # initiate IKE SAs
-            for ike in sa_nbma_list:
-                if ike_sa_name in ike:
-                    vyos.ipsec.vici_initiate(
-                        ike_sa_name,
-                        'dmvpn',
-                        ike[ike_sa_name]['local-host'],
-                        ike[ike_sa_name]['remote-host'],
-                    )
             print(
                 f'Profile {profile} tunnel {tunnel} remote-host {nbma_dst} reset result: success'
             )
@@ -732,18 +723,6 @@ def reset_profile_all(profile: str, tunnel: str):
                 )
             # terminate IKE SAs
             vyos.ipsec.terminate_vici_by_name(ike_sa_name, None)
-            # initiate IKE SAs
-            for ike in sa_list:
-                if ike_sa_name in ike:
-                    vyos.ipsec.vici_initiate(
-                        ike_sa_name,
-                        'dmvpn',
-                        ike[ike_sa_name]['local-host'],
-                        ike[ike_sa_name]['remote-host'],
-                    )
-                print(
-                    f'Profile {profile} tunnel {tunnel} remote-host {ike[ike_sa_name]["remote-host"]} reset result: success'
-                )
             print(f'Profile {profile} tunnel {tunnel} reset result: success')
         except vyos.ipsec.ViciInitiateError as err:
             raise vyos.opmode.UnconfiguredSubsystem(err)

@@ -133,7 +133,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule(name_text, 'ipv4') }}
+        {{ conf | nft_default_rule('NAM-' + name_text, 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -269,7 +269,7 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule(name_text, 'ipv6') }}
+        {{ conf | nft_default_rule('NAM-' + name_text, 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}

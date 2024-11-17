@@ -461,11 +461,17 @@ def generate(container):
                 'dns_enabled': True,
                 'ipam_options': {
                     'driver': 'host-local'
+                },
+                'options': {
+                    'mtu': '1500'
                 }
             }
 
             if 'no_name_server' in network_config:
                 tmp['dns_enabled'] = False
+
+            if 'mtu' in network_config:
+                tmp['options']['mtu'] = network_config['mtu']
 
             for prefix in network_config['prefix']:
                 net = {'subnet': prefix, 'gateway': inc_ip(prefix, 1)}

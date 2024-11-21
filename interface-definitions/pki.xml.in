@@ -35,6 +35,12 @@
               <multi/>
             </properties>
           </leafNode>
+          <leafNode name="system-install">
+            <properties>
+              <help>Install into CA certificate store on router</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/pki/cli-revoke.xml.i>
         </children>
       </tagNode>

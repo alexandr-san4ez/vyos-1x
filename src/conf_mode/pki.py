@@ -54,6 +54,7 @@ from vyos import airbag
 airbag.enable()
 
 vyos_certbot_dir = directories['certbot']
+vyos_ca_certificates_dir = directories['ca_certificates']
 
 # keys to recursively search for under specified path
 sync_search = [
@@ -448,9 +449,32 @@ def verify(pki):
 
     return None
 
+def cleanup_system_ca():
+    if not os.path.exists(vyos_ca_certificates_dir):
+        os.mkdir(vyos_ca_certificates_dir)
+    else:
+        for filename in os.listdir(vyos_ca_certificates_dir):
+            full_path = os.path.join(vyos_ca_certificates_dir, filename)
+            if os.path.isfile(full_path):
+                os.unlink(full_path)
+
 def generate(pki):
     if not pki:
+        cleanup_system_ca()
         return None
+
+    # Create or cleanup CA install directory
+    if 'changed' in pki and 'ca' in pki['changed']:
+        cleanup_system_ca()
+
+        if 'ca' in pki:
+            for ca, ca_conf in pki['ca'].items():
+                if 'system_install' in ca_conf:
+                    ca_obj = load_certificate(ca_conf['certificate'])
+                    ca_path = os.path.join(vyos_ca_certificates_dir, f'{ca}.crt')
+
+                    with open(ca_path, 'w') as f:
+                        f.write(encode_certificate(ca_obj))
 
     # Certbot renewal only needs to re-trigger the services to load up the
     # new PEM file
@@ -526,6 +550,7 @@ def apply(pki):
     systemd_certbot_name = 'certbot.timer'
     if not pki:
         call(f'systemctl stop {systemd_certbot_name}')
+        call('update-ca-certificates')
         return None
 
     has_certbot = False
@@ -542,6 +567,10 @@ def apply(pki):
 
     if 'changed' in pki:
         call_dependents()
+
+        # Rebuild ca-certificates bundle
+        if 'ca' in pki['changed']:
+            call('update-ca-certificates')
 
     return None
 

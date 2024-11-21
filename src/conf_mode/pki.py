@@ -161,37 +161,6 @@ def get_config(config=None):
     if len(argv) > 1 and argv[1] == 'certbot_renew':
         pki['certbot_renew'] = {}
 
-<<<<<<< HEAD
-    tmp = node_changed(conf, base + ['ca'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
-    if tmp:
-        if 'changed' not in pki: pki.update({'changed':{}})
-        pki['changed'].update({'ca' : tmp})
-
-    tmp = node_changed(conf, base + ['certificate'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
-    if tmp:
-        if 'changed' not in pki: pki.update({'changed':{}})
-        pki['changed'].update({'certificate' : tmp})
-
-    tmp = node_changed(conf, base + ['dh'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
-    if tmp:
-        if 'changed' not in pki: pki.update({'changed':{}})
-        pki['changed'].update({'dh' : tmp})
-
-    tmp = node_changed(conf, base + ['key-pair'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
-    if tmp:
-        if 'changed' not in pki: pki.update({'changed':{}})
-        pki['changed'].update({'key_pair' : tmp})
-
-    tmp = node_changed(conf, base + ['openssh'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
-    if tmp:
-        if 'changed' not in pki: pki.update({'changed':{}})
-        pki['changed'].update({'openssh' : tmp})
-
-    tmp = node_changed(conf, base + ['openvpn', 'shared-secret'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
-    if tmp:
-        if 'changed' not in pki: pki.update({'changed':{}})
-        pki['changed'].update({'openvpn' : tmp})
-=======
 
     # Walk through the list of sync_translate mapping and build a list
     # which is later used to check if the node was changed in the CLI config
@@ -205,7 +174,6 @@ def get_config(config=None):
         if 'changed' not in pki:
             pki.update({'changed':{}})
         pki['changed'].update({key.replace('-', '_') : tmp})
->>>>>>> b433f9d48 (pki: T7122: remove duplicate list definition - can be auto generated)
 
     # We only merge on the defaults of there is a configuration at all
     if conf.exists(base):
@@ -520,11 +488,9 @@ def generate(pki):
     # Get foldernames under vyos_certbot_dir which each represent a certbot cert
     if os.path.exists(f'{vyos_certbot_dir}/live'):
         for cert in certbot_list_on_disk:
+            # ACME certificate is no longer in use by CLI remove it
             if cert not in certbot_list:
-                # certificate is no longer active on the CLI - remove it
                 certbot_delete(cert)
-<<<<<<< HEAD
-=======
                 continue
             # ACME not enabled for individual certificate - bail out early
             if 'acme' not in pki['certificate'][cert]:
@@ -553,7 +519,6 @@ def generate(pki):
                 if not bool(tmp) or tmp != cert_chain_base64:
                     Message(f'Add/replace automatically imported CA certificate for "{cert}"...')
                     add_cli_node(['pki', 'ca', f'{autochain_prefix}{cert}', 'certificate'], value=cert_chain_base64)
->>>>>>> 40a99b1d0 (vyos.base: T7122: add new Message() helper wrapper for print())
 
     return None
 

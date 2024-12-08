@@ -19,10 +19,11 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.frrender import pim_daemon
 from vyos.ifconfig import Section
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = 'pimd'
+PROCESS_NAME = pim_daemon
 base_path = ['protocols', 'pim']
 
 class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
@@ -57,8 +58,8 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pimd configuration
-        frrconfig = self.getFRRconfig(daemon=PROCESS_NAME)
-        self.assertIn(f'ip pim rp {rp} {group}', frrconfig)
+        frrconfig = self.getFRRconfig('router pim', endsection='^exit', daemon=PROCESS_NAME)
+        self.assertIn(f' rp {rp} {group}', frrconfig)
 
         for interface in interfaces:
             frrconfig = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
@@ -108,18 +109,18 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pimd configuration
-        frrconfig = self.getFRRconfig(daemon=PROCESS_NAME)
-        self.assertIn(f'ip pim rp {rp} {group}', frrconfig)
-        self.assertIn(f'ip pim rp keep-alive-timer {rp_keep_alive_timer}', frrconfig)
-        self.assertIn(f'ip pim ecmp rebalance', frrconfig)
-        self.assertIn(f'ip pim join-prune-interval {join_prune_interval}', frrconfig)
-        self.assertIn(f'ip pim keep-alive-timer {keep_alive_timer}', frrconfig)
-        self.assertIn(f'ip pim packets {packets}', frrconfig)
-        self.assertIn(f'ip pim register-accept-list {prefix_list}', frrconfig)
-        self.assertIn(f'ip pim register-suppress-time {register_suppress_time}', frrconfig)
-        self.assertIn(f'no ip pim send-v6-secondary', frrconfig)
-        self.assertIn(f'ip pim spt-switchover infinity-and-beyond prefix-list {prefix_list}', frrconfig)
-        self.assertIn(f'ip pim ssm prefix-list {prefix_list}', frrconfig)
+        frrconfig = self.getFRRconfig('router pim', endsection='^exit', daemon=PROCESS_NAME)
+        self.assertIn(f' no send-v6-secondary', frrconfig)
+        self.assertIn(f' rp {rp} {group}', frrconfig)
+        self.assertIn(f' register-suppress-time {register_suppress_time}', frrconfig)
+        self.assertIn(f' join-prune-interval {join_prune_interval}', frrconfig)
+        self.assertIn(f' packets {packets}', frrconfig)
+        self.assertIn(f' keep-alive-timer {keep_alive_timer}', frrconfig)
+        self.assertIn(f' rp keep-alive-timer {rp_keep_alive_timer}', frrconfig)
+        self.assertIn(f' ssm prefix-list {prefix_list}', frrconfig)
+        self.assertIn(f' register-accept-list {prefix_list}', frrconfig)
+        self.assertIn(f' spt-switchover infinity-and-beyond prefix-list {prefix_list}', frrconfig)
+        self.assertIn(f' ecmp rebalance', frrconfig)
 
     def test_03_pim_igmp_proxy(self):
         igmp_proxy = ['protocols', 'igmp-proxy']
@@ -184,9 +185,9 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
             for join, join_config in igmp_join.items():
                 if 'source' in join_config:
                     for source in join_config['source']:
-                        self.assertIn(f' ip igmp join {join} {source}', frrconfig)
+                        self.assertIn(f' ip igmp join-group {join} {source}', frrconfig)
                 else:
-                    self.assertIn(f' ip igmp join {join}', frrconfig)
+                    self.assertIn(f' ip igmp join-group {join}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

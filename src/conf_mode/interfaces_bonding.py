@@ -17,6 +17,7 @@
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import get_frrender_dict
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configdict import leaf_node_changed
@@ -30,10 +31,10 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.frrender import FRRender
 from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
 from vyos.ifconfig import Section
-from vyos.template import render_to_string
 from vyos.utils.assertion import assert_mac
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
@@ -42,9 +43,9 @@ from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents, call_dependents
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
+frrender = FRRender()
 
 def get_bond_mode(mode):
     if mode == 'round-robin':
@@ -87,10 +88,13 @@ def get_config(config=None):
         bond['mode'] = get_bond_mode(bond['mode'])
 
     tmp = is_node_changed(conf, base + [ifname, 'mode'])
-    if tmp: bond['shutdown_required'] = {}
+    if tmp: bond.update({'shutdown_required' : {}})
 
     tmp = is_node_changed(conf, base + [ifname, 'lacp-rate'])
-    if tmp: bond['shutdown_required'] = {}
+    if tmp: bond.update({'shutdown_required' : {}})
+
+    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
+    if tmp: bond.update({'frrender' : get_frrender_dict(conf)})
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
@@ -260,16 +264,16 @@ def verify(bond):
     return None
 
 def generate(bond):
-    bond['frr_zebra_config'] = ''
-    if 'deleted' not in bond:
-        bond['frr_zebra_config'] = render_to_string('frr/evpn.mh.frr.j2', bond)
+    if 'frrender' in bond:
+        frrender.generate(bond['frrender'])
     return None
 
 def apply(bond):
-    ifname = bond['ifname']
-    b = BondIf(ifname)
+    if 'frrender' in bond:
+        frrender.apply()
+
+    b = BondIf(bond['ifname'])
     if 'deleted' in bond:
-        # delete interface
         b.remove()
     else:
         b.update(bond)
@@ -280,16 +284,6 @@ def apply(bond):
         except ConfigError:
             raise ConfigError('Error in updating ethernet interface '
                               'after deleting it from bond')
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(frr.mgmt_daemon)
-    frr_cfg.modify_section(f'^interface {ifname}', stop_pattern='^exit', remove_stop_mark=True)
-    if 'frr_zebra_config' in bond:
-        frr_cfg.add_before(frr.default_add_before, bond['frr_zebra_config'])
-    frr_cfg.commit_configuration()
 
     return None
 

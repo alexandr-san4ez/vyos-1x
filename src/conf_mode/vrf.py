@@ -21,13 +21,14 @@ from json import loads
 import vyos.defaults
 
 from vyos.config import Config
+from vyos.configdict import get_frrender_dict
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_map
 from vyos.firewall import conntrack_required
+from vyos.frrender import FRRender
 from vyos.ifconfig import Interface
 from vyos.template import render
-from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import get_vrf_members
@@ -37,9 +38,9 @@ from vyos.utils.process import cmd
 from vyos.utils.process import popen
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
+frrender = FRRender()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 k_mod = ['vrf']
@@ -134,6 +135,10 @@ def get_config(config=None):
     if 'name' in vrf:
         vrf['conntrack'] = conntrack_required(conf)
 
+    # We need to merge the FRR rendering dict into the VRF dict
+    # this is required to get the route-map information to FRR
+    vrf.update({'frrender' : get_frrender_dict(conf)})
+
     # We also need the route-map information from the config
     #
     # XXX: one MUST always call this without the key_mangling() option! See
@@ -212,8 +217,9 @@ def verify(vrf):
 def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
-    # Render VRF Kernel/Zebra route-map filters
-    vrf['frr_zebra_config'] = render_to_string('frr/zebra.vrf.route-map.frr.j2', vrf)
+
+    if 'frrender' in vrf:
+        frrender.generate(vrf['frrender'])
 
     return None
 
@@ -355,13 +361,8 @@ def apply(vrf):
             if has_rule(afi, 2000, 'l3mdev'):
                 call(f'ip {afi} rule del pref 2000 l3mdev unreachable')
 
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr.mgmt_daemon)
-    frr_cfg.modify_section(f'^vrf .+', stop_pattern='^exit-vrf', remove_stop_mark=True)
-    if 'frr_zebra_config' in vrf:
-        frr_cfg.add_before(frr.default_add_before, vrf['frr_zebra_config'])
-    frr_cfg.commit_configuration()
+    if 'frrender' in vrf:
+        frrender.apply()
 
     return None
 

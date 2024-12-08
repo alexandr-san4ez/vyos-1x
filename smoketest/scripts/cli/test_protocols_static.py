@@ -33,7 +33,11 @@ routes = {
             '192.0.2.110' : { 'distance' : '110', 'interface' : 'eth0' },
             '192.0.2.120' : { 'distance' : '120', 'disable' : '' },
             '192.0.2.130' : { 'bfd' : '' },
-            '192.0.2.140' : { 'bfd_source' : '192.0.2.10' },
+            '192.0.2.131' : { 'bfd' : '',
+                              'bfd_profile' : 'vyos1' },
+            '192.0.2.140' : { 'bfd' : '',
+                              'bfd_source' : '192.0.2.10',
+                              'bfd_profile' : 'vyos2' },
         },
         'interface' : {
             'eth0'  : { 'distance' : '130' },
@@ -114,6 +118,45 @@ routes = {
     },
 }
 
+multicast_routes = {
+    '224.0.0.0/24' : {
+        'next_hop' : {
+            '224.203.0.1' : { },
+            '224.203.0.2' : { 'distance' : '110'},
+        },
+    },
+    '224.1.0.0/24' : {
+        'next_hop' : {
+            '224.205.0.1' : { 'disable' : {} },
+            '224.205.0.2' : { 'distance' : '110'},
+        },
+    },
+    '224.2.0.0/24' : {
+        'next_hop' : {
+            '1.2.3.0' : { },
+            '1.2.3.1' : { 'distance' : '110'},
+        },
+    },
+    '224.10.0.0/24' : {
+        'interface' : {
+            'eth1' : { 'disable' : {} },
+            'eth2' : { 'distance' : '110'},
+        },
+    },
+    '224.11.0.0/24' : {
+        'interface' : {
+            'eth0' : { },
+            'eth1' : { 'distance' : '10'},
+        },
+    },
+    '224.12.0.0/24' : {
+        'interface' : {
+            'eth0' : { },
+            'eth1' : { 'distance' : '200'},
+        },
+    },
+}
+
 tables = ['80', '81', '82']
 
 class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
@@ -138,7 +181,6 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(v6route)
 
     def test_01_static(self):
-        bfd_profile = 'vyos-test'
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
@@ -156,9 +198,12 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     if 'vrf' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
                     if 'bfd' in next_hop_config:
-                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', bfd_profile ])
-                    if 'bfd_source' in next_hop_config:
-                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source', next_hop_config['bfd_source'], 'profile', bfd_profile])
+                        self.cli_set(base + ['next-hop', next_hop, 'bfd'])
+                        if 'bfd_profile' in next_hop_config:
+                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', next_hop_config['bfd_profile']])
+                        if 'bfd_source' in next_hop_config:
+                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop'])
+                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'source-address', next_hop_config['bfd_source']])
                     if 'segments' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'segments', next_hop_config['segments']])
 
@@ -217,9 +262,11 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     if 'vrf' in next_hop_config:
                         tmp += ' nexthop-vrf ' + next_hop_config['vrf']
                     if 'bfd' in next_hop_config:
-                        tmp += ' bfd profile ' + bfd_profile
-                    if 'bfd_source' in next_hop_config:
-                        tmp += ' bfd multi-hop source ' + next_hop_config['bfd_source'] + ' profile ' + bfd_profile
+                        tmp += ' bfd'
+                        if 'bfd_source' in next_hop_config:
+                            tmp += ' multi-hop source ' + next_hop_config['bfd_source']
+                        if 'bfd_profile' in next_hop_config:
+                            tmp += ' profile ' + next_hop_config['bfd_profile']
                     if 'segments' in next_hop_config:
                         tmp += ' segments ' + next_hop_config['segments']
 
@@ -426,7 +473,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp['linkinfo']['info_kind'],          'vrf')
 
             # Verify FRR bgpd configuration
-            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
             self.assertIn(f'vrf {vrf}', frrconfig)
 
             # Verify routes
@@ -478,5 +525,48 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
                     self.assertIn(tmp, frrconfig)
 
+    def test_04_static_multicast(self):
+        for route, route_config in multicast_routes.items():
+            if 'next_hop' in route_config:
+                base = base_path + ['multicast', 'route', route]
+                for next_hop, next_hop_config in route_config['next_hop'].items():
+                    self.cli_set(base + ['next-hop', next_hop])
+                    if 'distance' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
+                    if 'disable' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'disable'])
+
+            if 'interface' in route_config:
+                base = base_path + ['multicast', 'route', route]
+                for next_hop, next_hop_config in route_config['interface'].items():
+                    self.cli_set(base + ['interface', next_hop])
+                    if 'distance' in next_hop_config:
+                        self.cli_set(base + ['interface', next_hop, 'distance', next_hop_config['distance']])
+
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig('ip mroute', end='')
+        for route, route_config in multicast_routes.items():
+            if 'next_hop' in route_config:
+                for next_hop, next_hop_config in route_config['next_hop'].items():
+                    tmp = f'ip mroute {route} {next_hop}'
+                    if 'distance' in next_hop_config:
+                        tmp += ' ' + next_hop_config['distance']
+                    if 'disable' in next_hop_config:
+                        self.assertNotIn(tmp, frrconfig)
+                    else:
+                        self.assertIn(tmp, frrconfig)
+
+            if 'next_hop_interface' in route_config:
+                for next_hop, next_hop_config in route_config['next_hop_interface'].items():
+                    tmp = f'ip mroute {route} {next_hop}'
+                    if 'distance' in next_hop_config:
+                        tmp += ' ' + next_hop_config['distance']
+                    if 'disable' in next_hop_config:
+                        self.assertNotIn(tmp, frrconfig)
+                    else:
+                        self.assertIn(tmp, frrconfig)
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

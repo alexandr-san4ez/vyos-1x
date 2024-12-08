@@ -51,10 +51,18 @@
         #include <include/static/static-route-distance.xml.i>
         #include <include/static/static-route-interface.xml.i>
         #include <include/static/static-route-vrf.xml.i>
-        #include <include/static/static-route-bfd.xml.i>
+        <node name="bfd">
+          <properties>
+            <help>BFD monitoring</help>
+          </properties>
+          <children>
+            #include <include/bfd/profile.xml.i>
+            #include <include/static/bfd-multi-hop.xml.i>
+            #include <include/source-address-ipv4.xml.i>
+          </children>
+        </node>
       </children>
     </tagNode>
   </children>
 </tagNode>
 <!-- include end -->
-

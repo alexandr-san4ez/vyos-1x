@@ -14,21 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from ipaddress import IPv4Network
 from sys import exit
 from sys import argv
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.configdict import get_dhcp_interfaces
-from vyos.configdict import get_pppoe_interfaces
+from vyos.configdict import get_frrender_dict
+from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
+from vyos.frrender import FRRender
 from vyos.template import render
-from vyos.template import render_to_string
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
+frrender = FRRender()
+
+vrf = None
+if len(argv) > 1:
+    vrf = argv[1]
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-static.conf'
 
@@ -38,36 +42,17 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    vrf = None
-    if len(argv) > 1:
-        vrf = argv[1]
+    return get_frrender_dict(conf)
 
-    base_path = ['protocols', 'static']
+def verify(config_dict):
+    global vrf
+    if not has_frr_protocol_in_dict(config_dict, 'static', vrf):
+        return None
+
     # eqivalent of the C foo ? 'a' : 'b' statement
-    base = vrf and ['vrf', 'name', vrf, 'protocols', 'static'] or base_path
-    static = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
+    static = vrf and config_dict['vrf']['name'][vrf]['protocols']['static'] or config_dict['static']
+    static['policy'] = config_dict['policy']
 
-    # Assign the name of our VRF context
-    if vrf: static['vrf'] = vrf
-
-    # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify().
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = conf.get_config_dict(['policy'])
-    # Merge policy dict into "regular" config dict
-    static = dict_merge(tmp, static)
-
-    # T3680 - get a list of all interfaces currently configured to use DHCP
-    tmp = get_dhcp_interfaces(conf, vrf)
-    if tmp: static.update({'dhcp' : tmp})
-    tmp = get_pppoe_interfaces(conf, vrf)
-    if tmp: static.update({'pppoe' : tmp})
-
-    return static
-
-def verify(static):
     verify_common_route_maps(static)
 
     for route in ['route', 'route6']:
@@ -90,33 +75,28 @@ def verify(static):
                 raise ConfigError(f'Can not use both blackhole and reject for '\
                                   f'prefix "{prefix}"!')
 
+    if 'multicast' in static and 'route' in static['multicast']:
+        for prefix, prefix_options in static['multicast']['route'].items():
+            if not IPv4Network(prefix).is_multicast:
+                raise ConfigError(f'{prefix} is not a multicast network!')
+
     return None
 
-def generate(static):
-    if not static:
+def generate(config_dict):
+    global vrf
+    if not has_frr_protocol_in_dict(config_dict, 'static', vrf):
         return None
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    static = vrf and config_dict['vrf']['name'][vrf]['protocols']['static'] or config_dict['static']
 
     # Put routing table names in /etc/iproute2/rt_tables
     render(config_file, 'iproute2/static.conf.j2', static)
-    static['new_frr_config'] = render_to_string('frr/staticd.frr.j2', static)
+    frrender.generate(config_dict)
     return None
 
 def apply(static):
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr.mgmt_daemon)
-
-    if 'vrf' in static:
-        vrf = static['vrf']
-        frr_cfg.modify_section(f'^vrf {vrf}', stop_pattern='^exit-vrf', remove_stop_mark=True)
-    else:
-        frr_cfg.modify_section(r'^ip route .*')
-        frr_cfg.modify_section(r'^ipv6 route .*')
-
-    if 'new_frr_config' in static:
-        frr_cfg.add_before(frr.default_add_before, static['new_frr_config'])
-    frr_cfg.commit_configuration()
-
+    frrender.apply()
     return None
 
 if __name__ == '__main__':

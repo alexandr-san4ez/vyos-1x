@@ -15,36 +15,31 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.config import Config
+from vyos.configdict import get_frrender_dict
 from vyos.configverify import verify_vrf
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.frrender import FRRender
 from vyos.template import is_ipv6
-from vyos.template import render_to_string
 from vyos.utils.network import is_ipv6_link_local
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
+
+frrender = FRRender()
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'bfd']
-    bfd = conf.get_config_dict(base, key_mangling=('-', '_'),
-                               get_first_key=True,
-                               no_tag_node_value_mangle=True)
-    # Bail out early if configuration tree does not exist
-    if not conf.exists(base):
-        return bfd
 
-    bfd = conf.merge_defaults(bfd, recursive=True)
+    return get_frrender_dict(conf)
 
-    return bfd
-
-def verify(bfd):
-    if not bfd:
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'bfd'):
         return None
 
+    bfd = config_dict['bfd']
     if 'peer' in bfd:
         for peer, peer_config in bfd['peer'].items():
             # IPv6 link local peers require an explicit local address/interface
@@ -83,20 +78,11 @@ def verify(bfd):
 
     return None
 
-def generate(bfd):
-    if not bfd:
-        return None
-    bfd['new_frr_config'] = render_to_string('frr/bfdd.frr.j2', bfd)
+def generate(config_dict):
+    frrender.generate(config_dict)
 
-def apply(bfd):
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr.bfd_daemon)
-    frr_cfg.modify_section('^bfd', stop_pattern='^exit', remove_stop_mark=True)
-    if 'new_frr_config' in bfd:
-        frr_cfg.add_before(frr.default_add_before, bfd['new_frr_config'])
-    frr_cfg.commit_configuration(frr.bfd_daemon)
-
+def apply(config_dict):
+    frrender.apply()
     return None
 
 if __name__ == '__main__':

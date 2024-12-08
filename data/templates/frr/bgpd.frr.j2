@@ -1,13 +1,19 @@
 {### MACRO definition for recurring peer patter, this can be either fed by a ###}
 {### peer-group or an individual BGP neighbor ###}
 {% macro bgp_neighbor(neighbor, config, peer_group=false) %}
+{# BGP order of peer-group and remote-as placement must be honored #}
 {% if peer_group == true %}
  neighbor {{ neighbor }} peer-group
-{% elif config.peer_group is vyos_defined %}
- neighbor {{ neighbor }} peer-group {{ config.peer_group }}
-{% endif %}
-{% if config.remote_as is vyos_defined %}
+{%     if config.remote_as is vyos_defined %}
  neighbor {{ neighbor }} remote-as {{ config.remote_as }}
+{%     endif %}
+{% else %}
+{%     if config.remote_as is vyos_defined %}
+ neighbor {{ neighbor }} remote-as {{ config.remote_as }}
+{%     endif %}
+{%     if config.peer_group is vyos_defined %}
+ neighbor {{ neighbor }} peer-group {{ config.peer_group }}
+{%     endif %}
 {% endif %}
 {% if config.local_role is vyos_defined %}
 {%     for role, strict in config.local_role.items() %}

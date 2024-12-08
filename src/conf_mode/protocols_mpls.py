@@ -20,32 +20,32 @@ from sys import exit
 
 from glob import glob
 from vyos.config import Config
-from vyos.template import render_to_string
+from vyos.configdict import get_frrender_dict
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.frrender import FRRender
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.utils.system import sysctl_write
 from vyos.configverify import verify_interface_exists
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/ldpd.frr'
+frrender = FRRender()
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'mpls']
 
-    mpls = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    return mpls
+    return get_frrender_dict(conf)
 
-def verify(mpls):
-    # If no config, then just bail out early.
-    if not mpls:
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'mpls'):
         return None
+
+    mpls = config_dict['mpls']
 
     if 'interface' in mpls:
         for interface in mpls['interface']:
@@ -68,24 +68,16 @@ def verify(mpls):
 
     return None
 
-def generate(mpls):
-    # If there's no MPLS config generated, create dictionary key with no value.
-    if not mpls or 'deleted' in mpls:
+def generate(config_dict):
+    frrender.generate(config_dict)
+
+def apply(config_dict):
+    frrender.apply()
+
+    if not has_frr_protocol_in_dict(config_dict, 'mpls'):
         return None
 
-    mpls['frr_ldpd_config'] = render_to_string('frr/ldpd.frr.j2', mpls)
-    return None
-
-def apply(mpls):
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    frr_cfg.load_configuration(frr.ldpd_daemon)
-    frr_cfg.modify_section(f'^mpls ldp', stop_pattern='^exit', remove_stop_mark=True)
-
-    if 'frr_ldpd_config' in mpls:
-        frr_cfg.add_before(frr.default_add_before, mpls['frr_ldpd_config'])
-    frr_cfg.commit_configuration(frr.ldpd_daemon)
+    mpls = config_dict['mpls']
 
     # Set number of entries in the platform label tables
     labels = '0'

@@ -22,6 +22,7 @@ from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'bfdd'
 base_path = ['protocols', 'bfd']
+frr_endsection = '^ exit'
 
 dum_if = 'dum1001'
 vrf_name = 'red'
@@ -130,7 +131,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('bfd', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('bfd', endsection='^exit', daemon=PROCESS_NAME)
         for peer, peer_config in peers.items():
             tmp = f'peer {peer}'
             if 'multihop' in peer_config:
@@ -143,8 +144,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
-
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='', endsection=frr_endsection,
+                                           daemon=PROCESS_NAME)
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
             if 'intv_echo' in peer_config:
@@ -206,7 +207,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         for profile, profile_config in profiles.items():
-            config = self.getFRRconfig(f' profile {profile}', endsection='^ !')
+            config = self.getFRRconfig(f' profile {profile}', endsection=frr_endsection)
             if 'echo_mode' in profile_config:
                 self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
@@ -228,7 +229,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertNotIn(f'shutdown', config)
 
         for peer, peer_config in peers.items():
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='',
+                                           endsection=frr_endsection, daemon=PROCESS_NAME)
             if 'profile' in peer_config:
                 self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 

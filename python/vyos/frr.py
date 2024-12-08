@@ -69,6 +69,7 @@ import tempfile
 import re
 
 from vyos import ConfigError
+from vyos.defaults import frr_debug_enable
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
 from vyos.utils.process import STDOUT
@@ -144,7 +145,7 @@ class ConfigSectionNotFound(FrrError):
 def init_debugging():
     global DEBUG
 
-    DEBUG = os.path.exists('/tmp/vyos.frr.debug')
+    DEBUG = os.path.exists(frr_debug_enable)
     if DEBUG:
         LOG.setLevel(logging.DEBUG)
 

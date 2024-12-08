@@ -19,13 +19,13 @@ Library used to interface with FRRs mgmtd introduced in version 10.0
 
 import os
 
+from vyos.defaults import frr_debug_enable
 from vyos.utils.file import write_file
 from vyos.utils.process import rc_cmd
 from vyos.template import render_to_string
 from vyos import ConfigError
 
-DEBUG_ON = os.path.exists('/tmp/vyos.frr.debug')
-DEBUG_ON = True
+DEBUG_ON = os.path.exists(frr_debug_enable)
 
 def debug(message):
     if not DEBUG_ON:

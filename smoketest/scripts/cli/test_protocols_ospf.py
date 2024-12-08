@@ -22,6 +22,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
@@ -279,6 +280,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         retransmit = '5'
         transmit = '5'
         dead = '40'
+        window_default = default_value(base_path + ['area', area, 'virtual-link', virtual_link, 'retransmit-window'])
 
         self.cli_set(base_path + ['area', area, 'shortcut', shortcut])
         self.cli_set(base_path + ['area', area, 'virtual-link', virtual_link, 'hello-interval', hello])
@@ -295,7 +297,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} shortcut {shortcut}', frrconfig)
-        self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
+        self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} retransmit-window {window_default} transmit-delay {transmit} dead-interval {dead}', frrconfig)
         for network in networks:
             self.assertIn(f' network {network} area {area}', frrconfig)
 

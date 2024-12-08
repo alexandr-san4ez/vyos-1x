@@ -245,9 +245,11 @@
   neighbor {{ neighbor }} activate
  exit-address-family
  !
+{# j2lint: disable=jinja-statements-delimeter #}
 {%     endfor %}
 {% endif %}
-{% endmacro %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%- endmacro -%}
 !
 router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.ebgp_requires_policy is vyos_defined %}
@@ -517,13 +519,15 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if peer_group is vyos_defined %}
 {%     for peer, config in peer_group.items() %}
 {{ bgp_neighbor(peer, config, true) }}
-{%     endfor %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
  !
 {% if neighbor is vyos_defined %}
 {%     for peer, config in neighbor.items() %}
 {{ bgp_neighbor(peer, config) }}
-{%     endfor %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
  !
 {% if listen.limit is vyos_defined %}

@@ -848,7 +848,7 @@
           </node>
           <leafNode name="vpn">
             <properties>
-              <help>Monitor last lines of ALL Virtual Private Network services</help>
+              <help>Show log for ALL Virtual Private Network services</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
           </leafNode>
@@ -904,6 +904,12 @@
               <help>Show log for Virtual Router Redundancy Protocol (VRRP)</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit keepalived.service</command>
+          </leafNode>
+          <leafNode name="vyos-configd">
+            <properties>
+              <help>Show log for VyOS configuration daemon</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit vyos-configd.service</command>
           </leafNode>
           <leafNode name="vyos-domain-resolver">
             <properties>

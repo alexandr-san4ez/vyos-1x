@@ -371,6 +371,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit keepalived.service</command>
           </leafNode>
+          <leafNode name="vyos-configd">
+            <properties>
+              <help>Monitor last lines of VyOS configuration daemon log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit vyos-configd.service</command>
+          </leafNode>
           <leafNode name="vyos-domain-resolver">
             <properties>
               <help>Monitor last lines of VyOS domain resolver daemon log</help>

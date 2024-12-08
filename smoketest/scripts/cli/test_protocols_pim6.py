@@ -90,7 +90,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
             self.assertIn(f'interface {interface}', config)
-            self.assertIn(f' ipv6 mld join ff18::1234', config)
+            self.assertIn(f' ipv6 mld join-group ff18::1234', config)
 
         # Join a source-specific multicast group
         for interface in interfaces:
@@ -102,7 +102,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
             self.assertIn(f'interface {interface}', config)
-            self.assertIn(f' ipv6 mld join ff38::5678 2001:db8::5678', config)
+            self.assertIn(f' ipv6 mld join-group ff38::5678 2001:db8::5678', config)
 
     def test_pim6_03_basic(self):
         interfaces = Section.interfaces('ethernet')
@@ -128,11 +128,11 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pim6d configuration
-        config = self.getFRRconfig(daemon=PROCESS_NAME)
-        self.assertIn(f'ipv6 pim join-prune-interval {join_prune_interval}', config)
-        self.assertIn(f'ipv6 pim keep-alive-timer {keep_alive_timer}', config)
-        self.assertIn(f'ipv6 pim packets {packets}', config)
-        self.assertIn(f'ipv6 pim register-suppress-time {register_suppress_time}', config)
+        config = self.getFRRconfig('router pim6', endsection='^exit', daemon=PROCESS_NAME)
+        self.assertIn(f' join-prune-interval {join_prune_interval}', config)
+        self.assertIn(f' keep-alive-timer {keep_alive_timer}', config)
+        self.assertIn(f' packets {packets}', config)
+        self.assertIn(f' register-suppress-time {register_suppress_time}', config)
 
         for interface in interfaces:
             config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)

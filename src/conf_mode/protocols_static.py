@@ -28,7 +28,6 @@ from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-frrender = FRRender()
 
 vrf = None
 if len(argv) > 1:
@@ -92,11 +91,14 @@ def generate(config_dict):
 
     # Put routing table names in /etc/iproute2/rt_tables
     render(config_file, 'iproute2/static.conf.j2', static)
-    frrender.generate(config_dict)
+
+    if 'frrender_cls' not in config_dict:
+        FRRender().generate(config_dict)
     return None
 
 def apply(static):
-    frrender.apply()
+    if 'frrender_cls' not in config_dict:
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

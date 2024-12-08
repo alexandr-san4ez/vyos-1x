@@ -1179,6 +1179,12 @@ def get_frrender_dict(conf) -> dict:
 
         dict.update({'vrf' : vrf})
 
+    # Use singleton instance of the FRR render class
+    if hasattr(conf, 'frrender_cls'):
+        frrender = getattr(conf, 'frrender_cls')
+        dict.update({'frrender_cls' : frrender})
+        frrender.generate(dict)
+
     if os.path.exists(frr_debug_enable):
         print('======== < BEGIN > ==========')
         import pprint

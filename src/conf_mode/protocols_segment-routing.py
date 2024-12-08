@@ -27,7 +27,6 @@ from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-frrender = FRRender()
 
 def get_config(config=None):
     if config:
@@ -55,7 +54,8 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    frrender.generate(config_dict)
+    if 'frrender_cls' not in config_dict:
+        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
@@ -88,7 +88,8 @@ def apply(config_dict):
         else:
             sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
 
-    frrender.apply()
+    if 'frrender_cls' not in config_dict:
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

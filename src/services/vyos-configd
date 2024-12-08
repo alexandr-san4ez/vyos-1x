@@ -38,6 +38,7 @@ from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
 from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
+from vyos.frrender import FRRender
 from vyos import ConfigError
 
 CFG_GROUP = 'vyattacfg'
@@ -217,6 +218,9 @@ def initialization(socket):
     scripts_called = []
     setattr(config, 'scripts_called', scripts_called)
 
+    if not hasattr(config, 'frrender_cls'):
+        setattr(config, 'frrender_cls', FRRender())
+
     return config
 
 
@@ -336,5 +340,9 @@ if __name__ == '__main__':
             if message['last'] and config:
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
+
+                if hasattr(config, 'frrender_cls'):
+                    frrender_cls = getattr(config, 'frrender_cls')
+                    frrender_cls.apply()
         else:
             logger.critical(f'Unexpected message: {message}')

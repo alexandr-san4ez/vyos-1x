@@ -27,8 +27,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-frrender = FRRender()
-
 def get_config(config=None):
     if config:
         conf = config
@@ -91,10 +89,13 @@ def verify(config_dict):
 
 
 def generate(config_dict):
-    frrender.generate(config_dict)
+    if 'frrender_cls' not in config_dict:
+        FRRender().generate(config_dict)
+    return None
 
 def apply(config_dict):
-    frrender.apply()
+    if 'frrender_cls' not in config_dict:
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

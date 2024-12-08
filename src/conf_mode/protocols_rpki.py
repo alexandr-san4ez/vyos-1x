@@ -30,7 +30,6 @@ from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-frrender = FRRender()
 
 rpki_ssh_key_base = '/run/frr/id_rpki'
 
@@ -95,11 +94,13 @@ def generate(config_dict):
                 write_file(cache_config['ssh']['public_key_file'], wrap_openssh_public_key(public_key_data, public_key_type))
                 write_file(cache_config['ssh']['private_key_file'], wrap_openssh_private_key(private_key_data))
 
-    frrender.generate(config_dict)
+    if 'frrender_cls' not in config_dict:
+        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    frrender.apply()
+    if 'frrender_cls' not in config_dict:
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

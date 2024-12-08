@@ -28,8 +28,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-frrender = FRRender()
-
 def get_config(config=None):
     if config:
         conf = config
@@ -69,11 +67,14 @@ def verify(config_dict):
                     raise ConfigError(f'You can not have "split-horizon poison-reverse" enabled ' \
                                       f'with "split-horizon disable" for "{interface}"!')
 
-def generate(frr_dict):
-    frrender.generate(frr_dict)
+def generate(config_dict):
+    if 'frrender_cls' not in config_dict:
+        FRRender().generate(config_dict)
+    return None
 
-def apply(rip):
-    frrender.apply()
+def apply(config_dict):
+    if 'frrender_cls' not in config_dict:
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

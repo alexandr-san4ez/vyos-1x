@@ -45,7 +45,6 @@ from vyos.configdep import set_dependents, call_dependents
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-frrender = FRRender()
 
 def get_bond_mode(mode):
     if mode == 'round-robin':
@@ -94,7 +93,7 @@ def get_config(config=None):
     if tmp: bond.update({'shutdown_required' : {}})
 
     tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: bond.update({'frrender' : get_frrender_dict(conf)})
+    if tmp: bond.update({'frr_dict' : get_frrender_dict(conf)})
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
@@ -264,13 +263,13 @@ def verify(bond):
     return None
 
 def generate(bond):
-    if 'frrender' in bond:
-        frrender.generate(bond['frrender'])
+    if 'frr_dict' in bond and 'frrender_cls' not in bond['frr_dict']:
+        FRRender().generate(bond['frr_dict'])
     return None
 
 def apply(bond):
-    if 'frrender' in bond:
-        frrender.apply()
+    if 'frr_dict' in bond and 'frrender_cls' not in bond['frr_dict']:
+        FRRender().apply()
 
     b = BondIf(bond['ifname'])
     if 'deleted' in bond:

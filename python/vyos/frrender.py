@@ -136,7 +136,7 @@ class FRRender:
         emsg = ''
         while count < count_max:
             count += 1
-            print('FRR: Reloading configuration', count)
+            print('FRR: Reloading configuration - tries:', count, 'Python class ID:', id(self))
 
             cmdline = '/usr/lib/frr/frr-reload.py --reload'
             if DEBUG_ON:

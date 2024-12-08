@@ -40,7 +40,6 @@ from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-frrender = FRRender()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 k_mod = ['vrf']
@@ -137,7 +136,7 @@ def get_config(config=None):
 
     # We need to merge the FRR rendering dict into the VRF dict
     # this is required to get the route-map information to FRR
-    vrf.update({'frrender' : get_frrender_dict(conf)})
+    vrf.update({'frr_dict' : get_frrender_dict(conf)})
 
     # We also need the route-map information from the config
     #
@@ -218,8 +217,8 @@ def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
 
-    if 'frrender' in vrf:
-        frrender.generate(vrf['frrender'])
+    if 'frr_dict' in vrf and 'frrender_cls' not in vrf['frr_dict']:
+        FRRender().generate(vrf['frr_dict'])
 
     return None
 
@@ -361,8 +360,8 @@ def apply(vrf):
             if has_rule(afi, 2000, 'l3mdev'):
                 call(f'ip {afi} rule del pref 2000 l3mdev unreachable')
 
-    if 'frrender' in vrf:
-        frrender.apply()
+    if 'frr_dict' in vrf and 'frrender_cls' not in vrf['frr_dict']:
+        FRRender().apply()
 
     return None
 

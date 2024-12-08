@@ -31,8 +31,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-frrender = FRRender()
-
 def get_config(config=None):
     if config:
         conf = config
@@ -69,10 +67,13 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    frrender.generate(config_dict)
+    if 'frrender_cls' not in config_dict:
+        FRRender().generate(config_dict)
+    return None
 
 def apply(config_dict):
-    frrender.apply()
+    if 'frrender_cls' not in config_dict:
+        FRRender().apply()
 
     if not has_frr_protocol_in_dict(config_dict, 'mpls'):
         return None

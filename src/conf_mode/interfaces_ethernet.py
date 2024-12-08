@@ -45,7 +45,6 @@ from vyos.utils.dict import dict_delete
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-frrender = FRRender()
 
 def update_bond_options(conf: Config, eth_conf: dict) -> list:
     """
@@ -167,7 +166,7 @@ def get_config(config=None):
     if tmp: ethernet.update({'speed_duplex_changed': {}})
 
     tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: ethernet.update({'frrender' : get_frrender_dict(conf)})a
+    if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
 
     ethernet['flowtable_interfaces'] = get_flowtable_interfaces(conf)
 
@@ -356,13 +355,13 @@ def verify_ethernet(ethernet):
     return None
 
 def generate(ethernet):
-    if 'frrender' in ethernet:
-        frrender.generate(ethernet['frrender'])
+    if 'frr_dict' in ethernet and 'frrender_cls' not in ethernet['frr_dict']:
+        FRRender().generate(ethernet['frr_dict'])
     return None
 
 def apply(ethernet):
-    if 'frrender' in ethernet:
-        frrender.apply()
+    if 'frr_dict' in ethernet and 'frrender_cls' not in ethernet['frr_dict']:
+        FRRender().apply()
 
     e = EthernetIf(ethernet['ifname'])
     if 'deleted' in ethernet:

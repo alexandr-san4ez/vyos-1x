@@ -528,7 +528,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     def test_04_static_multicast(self):
         for route, route_config in multicast_routes.items():
             if 'next_hop' in route_config:
-                base = base_path + ['multicast', 'route', route]
+                base = base_path + ['mroute', route]
                 for next_hop, next_hop_config in route_config['next_hop'].items():
                     self.cli_set(base + ['next-hop', next_hop])
                     if 'distance' in next_hop_config:
@@ -537,7 +537,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(base + ['next-hop', next_hop, 'disable'])
 
             if 'interface' in route_config:
-                base = base_path + ['multicast', 'route', route]
+                base = base_path + ['mroute', route]
                 for next_hop, next_hop_config in route_config['interface'].items():
                     self.cli_set(base + ['interface', next_hop])
                     if 'distance' in next_hop_config:

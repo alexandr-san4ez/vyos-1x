@@ -128,15 +128,13 @@ exit-vrf
 {% endif %}
 !
 {# Multicast route #}
-{% if multicast is vyos_defined %}
+{% if mroute is vyos_defined %}
 {%     set ip_prefix = 'ip m' %}
 {# IPv4 multicast routing #}
-{%     if multicast.route is vyos_defined %}
-{%         for prefix, prefix_config in multicast.route.items() %}
+{%     for prefix, prefix_config in mroute.items() %}
 {{ static_routes(ip_prefix, prefix, prefix_config) }}
 {# j2lint: disable=jinja-statements-delimeter #}
-{%-        endfor %}
-{%     endif %}
+{%-    endfor %}
 {% endif %}
 !
 {% if route_map is vyos_defined %}

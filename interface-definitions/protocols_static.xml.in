@@ -11,62 +11,55 @@
           <priority>480</priority>
         </properties>
         <children>
-          <node name="multicast">
+          <tagNode name="mroute">
             <properties>
-              <help>Multicast static route</help>
+              <help>Static IPv4 route for Multicast RIB</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>Network</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+              </constraint>
             </properties>
             <children>
-              <tagNode name="route">
+              <tagNode name="next-hop">
                 <properties>
-                  <help>Configure static unicast route into MRIB for multicast RPF lookup</help>
+                  <help>Next-hop IPv4 router address</help>
                   <valueHelp>
-                    <format>ipv4net</format>
-                    <description>Network</description>
+                    <format>ipv4</format>
+                    <description>Next-hop router address</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="ip-prefix"/>
+                    <validator name="ipv4-address"/>
                   </constraint>
                 </properties>
                 <children>
-                  <tagNode name="next-hop">
-                    <properties>
-                      <help>Next-hop IPv4 router address</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Next-hop router address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                    <children>
-                      #include <include/generic-disable-node.xml.i>
-                      #include <include/static/static-route-distance.xml.i>
-                    </children>
-                  </tagNode>
-                  <tagNode name="interface">
-                    <properties>
-                      <help>Next-hop IPv4 router interface</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces</script>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Gateway interface name</description>
-                      </valueHelp>
-                      <constraint>
-                        #include <include/constraint/interface-name.xml.i>
-                      </constraint>
-                    </properties>
-                    <children>
-                      #include <include/generic-disable-node.xml.i>
-                      #include <include/static/static-route-distance.xml.i>
-                    </children>
-                  </tagNode>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/static/static-route-distance.xml.i>
+                </children>
+              </tagNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Next-hop IPv4 router interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Gateway interface name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/static/static-route-distance.xml.i>
                 </children>
               </tagNode>
             </children>
-          </node>
+          </tagNode>
           #include <include/route-map.xml.i>
           #include <include/static/static-route.xml.i>
           #include <include/static/static-route6.xml.i>

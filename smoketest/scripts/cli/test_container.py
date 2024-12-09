@@ -107,6 +107,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         n = cmd_to_json(f'sudo podman inspect {cont_name}')
         self.assertEqual(n['HostConfig']['Dns'][0], name_server)
 
+        tmp = cmd(f'sudo podman exec -it {cont_name} cat /etc/resolv.conf')
+        self.assertIn(name_server, tmp)
+
     def test_cpu_limit(self):
         cont_name = 'c2'
 

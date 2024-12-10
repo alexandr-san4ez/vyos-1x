@@ -149,6 +149,9 @@ def verify(container):
                 if network_name not in container.get('network', {}):
                     raise ConfigError(f'Container network "{network_name}" does not exist!')
 
+                if 'name_server' in container_config and 'no_name_server' not in container['network'][network_name]:
+                    raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
+
                 if 'address' in container_config['network'][network_name]:
                     cnt_ipv4 = 0
                     cnt_ipv6 = 0

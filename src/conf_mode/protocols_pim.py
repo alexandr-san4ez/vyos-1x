@@ -86,7 +86,7 @@ def verify(config_dict):
                 unique.append(gr_addr)
 
 def generate(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
@@ -103,7 +103,7 @@ def apply(config_dict):
     if not pim_pid:
         call('/usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1')
 
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
     return None
 

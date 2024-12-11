@@ -29,10 +29,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-vrf = None
-if len(argv) > 1:
-    vrf = argv[1]
-
 config_file = '/etc/iproute2/rt_tables.d/vyos-static.conf'
 
 def get_config(config=None):
@@ -41,12 +37,15 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    return get_frrender_dict(conf)
+    return get_frrender_dict(conf, argv)
 
 def verify(config_dict):
-    global vrf
-    if not has_frr_protocol_in_dict(config_dict, 'static', vrf):
+    if not has_frr_protocol_in_dict(config_dict, 'static'):
         return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     static = vrf and config_dict['vrf']['name'][vrf]['protocols']['static'] or config_dict['static']
@@ -82,9 +81,12 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    global vrf
-    if not has_frr_protocol_in_dict(config_dict, 'static', vrf):
+    if not has_frr_protocol_in_dict(config_dict, 'static'):
         return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     static = vrf and config_dict['vrf']['name'][vrf]['protocols']['static'] or config_dict['static']
@@ -92,12 +94,12 @@ def generate(config_dict):
     # Put routing table names in /etc/iproute2/rt_tables
     render(config_file, 'iproute2/static.conf.j2', static)
 
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
-def apply(static):
-    if 'frrender_cls' not in config_dict:
+def apply(config_dict):
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
     return None
 

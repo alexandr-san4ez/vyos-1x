@@ -54,7 +54,7 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
@@ -88,7 +88,7 @@ def apply(config_dict):
         else:
             sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
 
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
     return None
 

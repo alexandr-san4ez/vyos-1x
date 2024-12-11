@@ -720,7 +720,7 @@ def get_flowtable_interfaces(config):
 
     return ifaces
 
-def get_frrender_dict(conf) -> dict:
+def get_frrender_dict(conf, argv=None) -> dict:
     from copy import deepcopy
     from vyos.config import config_dict_merge
     from vyos.frrender import frr_protocols
@@ -728,6 +728,9 @@ def get_frrender_dict(conf) -> dict:
     # Create an empty dictionary which will be filled down the code path and
     # returned to the caller
     dict = {}
+
+    if argv and len(argv) > 1:
+        dict['vrf_context'] = argv[1]
 
     def dict_helper_ospf_defaults(ospf, path):
         # We have gathered the dict representation of the CLI, but there are default
@@ -1078,7 +1081,11 @@ def get_frrender_dict(conf) -> dict:
 
                 if 'bgp' in dict:
                     dict['bgp']['dependent_vrfs'].update({vrf_name : {'protocols': tmp} })
-                vrf['name'][vrf_name]['protocols'].update({'bgp' : tmp})
+
+                if 'protocols' not in vrf['name'][vrf_name]:
+                    vrf['name'][vrf_name].update({'protocols': {'bgp' : tmp}})
+                else:
+                    vrf['name'][vrf_name]['protocols'].update({'bgp' : tmp})
 
             # We need to check the CLI if the EIGRP node is present and thus load in all the default
             # values present on the CLI - that's why we have if conf.exists()
@@ -1179,15 +1186,16 @@ def get_frrender_dict(conf) -> dict:
 
         dict.update({'vrf' : vrf})
 
+    if os.path.exists(frr_debug_enable):
+        print('======== < BEGIN > ==========')
+        import pprint
+        pprint.pprint(dict)
+        print('========= < END > ===========')
+
     # Use singleton instance of the FRR render class
     if hasattr(conf, 'frrender_cls'):
         frrender = getattr(conf, 'frrender_cls')
         dict.update({'frrender_cls' : frrender})
         frrender.generate(dict)
 
-    if os.path.exists(frr_debug_enable):
-        print('======== < BEGIN > ==========')
-        import pprint
-        pprint.pprint(dict)
-        print('========= < END > ===========')
     return dict

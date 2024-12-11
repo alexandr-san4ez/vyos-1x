@@ -67,12 +67,12 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
 
     if not has_frr_protocol_in_dict(config_dict, 'mpls'):

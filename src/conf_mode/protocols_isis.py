@@ -30,64 +30,21 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-vrf = None
-if len(argv) > 1:
-    vrf = argv[1]
-
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
 
-    return get_frrender_dict(conf)
-
-
-    # base_path = ['protocols', 'isis']
-
-    # # eqivalent of the C foo ? 'a' : 'b' statement
-    # base = vrf and ['vrf', 'name', vrf, 'protocols', 'isis'] or base_path
-    # isis = conf.get_config_dict(base, key_mangling=('-', '_'),
-    #                             get_first_key=True,
-    #                             no_tag_node_value_mangle=True)
-
-    # # Assign the name of our VRF context. This MUST be done before the return
-    # # statement below, else on deletion we will delete the default instance
-    # # instead of the VRF instance.
-    # if vrf: isis['vrf'] = vrf
-
-    # # FRR has VRF support for different routing daemons. As interfaces belong
-    # # to VRFs - or the global VRF, we need to check for changed interfaces so
-    # # that they will be properly rendered for the FRR config. Also this eases
-    # # removal of interfaces from the running configuration.
-    # interfaces_removed = node_changed(conf, base + ['interface'])
-    # if interfaces_removed:
-    #     isis['interface_removed'] = list(interfaces_removed)
-
-    # # Bail out early if configuration tree does no longer exist. this must
-    # # be done after retrieving the list of interfaces to be removed.
-    # if not conf.exists(base):
-    #     isis.update({'deleted' : ''})
-    #     return isis
-
-    # # merge in default values
-    # isis = conf.merge_defaults(isis, recursive=True)
-
-    # # We also need some additional information from the config, prefix-lists
-    # # and route-maps for instance. They will be used in verify().
-    # #
-    # # XXX: one MUST always call this without the key_mangling() option! See
-    # # vyos.configverify.verify_common_route_maps() for more information.
-    # tmp = conf.get_config_dict(['policy'])
-    # # Merge policy dict into "regular" config dict
-    # isis = dict_merge(tmp, isis)
-
-    return isis
+    return get_frrender_dict(conf, argv)
 
 def verify(config_dict):
-    global vrf
-    if not has_frr_protocol_in_dict(config_dict, 'isis', vrf):
+    if not has_frr_protocol_in_dict(config_dict, 'isis'):
         return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     isis = vrf and config_dict['vrf']['name'][vrf]['protocols']['isis'] or config_dict['isis']
@@ -95,9 +52,6 @@ def verify(config_dict):
 
     if 'deleted' in isis:
         return None
-
-    if vrf:
-        isis['vrf'] = vrf
 
     if 'net' not in isis:
         raise ConfigError('Network entity is mandatory!')
@@ -126,12 +80,11 @@ def verify(config_dict):
                               f'Recommended area lsp-mtu {recom_area_mtu} or less ' \
                               '(calculated on MTU size).')
 
-        if 'vrf' in isis:
+        if vrf:
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS
             # priorities the interface is bound to the VRF after creation of
             # the VRF itself, and before any routing protocol is configured.
-            vrf = isis['vrf']
             tmp = get_interface_config(interface)
             if 'master' not in tmp or tmp['master'] != vrf:
                 raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
@@ -279,12 +232,12 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
     return None
 

@@ -89,12 +89,12 @@ def verify(config_dict):
 
 
 def generate(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
     return None
 

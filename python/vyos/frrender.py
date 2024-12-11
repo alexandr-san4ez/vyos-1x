@@ -44,7 +44,8 @@ class FRRender:
 
     def generate(self, config):
         if not isinstance(config, dict):
-            raise ValueError('config must be of type dict')
+            tmp = type(config)
+            raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
 
         def inline_helper(config_dict) -> str:
             output = '!\n'
@@ -136,7 +137,7 @@ class FRRender:
         emsg = ''
         while count < count_max:
             count += 1
-            print('FRR: Reloading configuration - tries:', count, 'Python class ID:', id(self))
+            debug(f'FRR: Reloading configuration - tries: {count} | Python class ID: {id(self)}')
 
             cmdline = '/usr/lib/frr/frr-reload.py --reload'
             if DEBUG_ON:

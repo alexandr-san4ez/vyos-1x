@@ -563,7 +563,10 @@ def verify_eapol(config: dict):
         for ca_cert in config['eapol']['ca_certificate']:
             verify_pki_ca_certificate(config, ca_cert)
 
-def has_frr_protocol_in_dict(config_dict: dict, protocol: str, vrf: str=None) -> bool:
+def has_frr_protocol_in_dict(config_dict: dict, protocol: str) -> bool:
+    vrf = None
+    if config_dict and 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
     if vrf and protocol in (dict_search(f'vrf.name.{vrf}.protocols', config_dict) or []):
         return True
     if config_dict and protocol in config_dict:

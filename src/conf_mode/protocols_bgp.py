@@ -35,17 +35,13 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-vrf = None
-if len(argv) > 1:
-    vrf = argv[1]
-
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
 
-    return get_frrender_dict(conf)
+    return get_frrender_dict(conf, argv)
 
 def verify_vrf_as_import(search_vrf_name: str, afi_name: str, vrfs_config: dict) -> bool:
     """
@@ -179,23 +175,28 @@ def verify_afi(peer_config, bgp_config):
     return False
 
 def verify(config_dict):
-    global vrf
-    if not has_frr_protocol_in_dict(config_dict, 'bgp', vrf):
+
+    print('====== verify() ======')
+    import pprint
+    pprint.pprint(config_dict)
+
+    if not has_frr_protocol_in_dict(config_dict, 'bgp'):
         return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     bgp = vrf and config_dict['vrf']['name'][vrf]['protocols']['bgp'] or config_dict['bgp']
     bgp['policy'] = config_dict['policy']
 
-    if vrf:
-        bgp['vrf'] = vrf
-
     if 'deleted' in bgp:
-        if 'vrf' in bgp:
+        if vrf:
             # Cannot delete vrf if it exists in import vrf list in other vrfs
             for tmp_afi in ['ipv4_unicast', 'ipv6_unicast']:
-                if verify_vrf_as_import(bgp['vrf'], tmp_afi, bgp['dependent_vrfs']):
-                    raise ConfigError(f'Cannot delete VRF instance "{bgp["vrf"]}", ' \
+                if verify_vrf_as_import(vrf, tmp_afi, bgp['dependent_vrfs']):
+                    raise ConfigError(f'Cannot delete VRF instance "{vrf}", ' \
                                       'unconfigure "import vrf" commands!')
         else:
             # We are running in the default VRF context, thus we can not delete
@@ -234,9 +235,8 @@ def verify(config_dict):
         for interface in bgp['interface']:
             error_msg = f'Interface "{interface}" belongs to different VRF instance'
             tmp = get_interface_vrf(interface)
-            if 'vrf' in bgp:
-                if bgp['vrf'] != tmp:
-                    vrf = bgp['vrf']
+            if vrf:
+                if vrf != tmp:
                     raise ConfigError(f'{error_msg} "{vrf}"!')
             elif tmp != 'default':
                 raise ConfigError(f'{error_msg} "{tmp}"!')
@@ -337,10 +337,8 @@ def verify(config_dict):
 
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
-                vrf = None
                 vrf_error_msg = f' in default VRF!'
-                if 'vrf' in bgp:
-                    vrf = bgp['vrf']
+                if vrf:
                     vrf_error_msg = f' in VRF "{vrf}"!'
 
                 if is_ip(peer) and is_addr_assigned(peer, vrf):
@@ -486,7 +484,7 @@ def verify(config_dict):
                                          f'{afi} administrative distance {key}!')
 
             if afi in ['ipv4_unicast', 'ipv6_unicast']:
-                vrf_name = bgp['vrf'] if dict_search('vrf', bgp) else 'default'
+                vrf_name = vrf if vrf else 'default'
                 # Verify if currant VRF contains rd and route-target options
                 # and does not exist in import list in other VRFs
                 if dict_search(f'rd.vpn.export', afi_config):
@@ -572,12 +570,12 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if 'frrender_cls' not in config_dict:
+    if config_dict and 'frrender_cls' not in config_dict:
         FRRender().apply()
     return None
 

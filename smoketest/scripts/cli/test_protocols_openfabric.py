@@ -19,7 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
-from vyos.frr import openfabric_daemon
+from vyos.frrender import openfabric_daemon
 
 PROCESS_NAME = 'fabricd'
 base_path = ['protocols', 'openfabric']

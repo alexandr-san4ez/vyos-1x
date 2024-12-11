@@ -27,7 +27,7 @@ from netifaces import ifaddresses
 from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.frr import mgmt_daemon
+from vyos.frrender import mgmt_daemon
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
 from vyos.utils.file import read_file

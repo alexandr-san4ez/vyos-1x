@@ -20,7 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.frr import zebra_daemon
+from vyos.frrender import zebra_daemon
 from vyos.utils.process import process_named_running
 from vyos.utils.system import sysctl_read
 

@@ -24,7 +24,7 @@ from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
 from vyos.utils.network import get_interface_config
 from vyos.utils.file import read_file
-from vyos.frr import mgmt_daemon
+from vyos.frrender import mgmt_daemon
 
 class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod

@@ -39,6 +39,7 @@ frr_protocols = ['babel', 'bfd', 'bgp', 'eigrp', 'isis', 'mpls', 'nhrp',
 bgp_daemon = 'bgpd'
 isis_daemon = 'isisd'
 mgmt_daemon = 'mgmtd'
+openfabric_daemon = 'fabricd'
 pim_daemon = 'pimd'
 zebra_daemon = 'zebra'
 

@@ -25,7 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
-from vyos.frr import bgp_daemon
+from vyos.frrender import bgp_daemon
 
 PROCESS_NAME = 'bgpd'
 ASN = '64512'

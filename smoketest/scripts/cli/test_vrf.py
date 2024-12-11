@@ -23,7 +23,7 @@ from json import loads
 from jmespath import search
 
 from vyos.configsession import ConfigSessionError
-from vyos.frr import mgmt_daemon
+from vyos.frrender import mgmt_daemon
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file

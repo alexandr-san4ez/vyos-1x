@@ -1154,8 +1154,8 @@ def get_frrender_dict(conf, argv=None) -> dict:
                 vrf['name'][vrf_name]['protocols'].update({'static': {'deleted' : ''}})
 
             vrf_vni_path = ['vrf', 'name', vrf_name, 'vni']
-            if conf.exists_effective(vrf_vni_path):
-                vrf_config.update({'vni': conf.return_effective_value(vrf_vni_path)})
+            if conf.exists(vrf_vni_path):
+                vrf_config.update({'vni': conf.return_value(vrf_vni_path)})
 
             dict.update({'vrf' : vrf})
     elif conf.exists_effective(vrf_cli_path):

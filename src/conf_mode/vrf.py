@@ -22,7 +22,6 @@ import vyos.defaults
 
 from vyos.config import Config
 from vyos.configdict import get_frrender_dict
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_map
 from vyos.firewall import conntrack_required
@@ -137,16 +136,6 @@ def get_config(config=None):
     # We need to merge the FRR rendering dict into the VRF dict
     # this is required to get the route-map information to FRR
     vrf.update({'frr_dict' : get_frrender_dict(conf)})
-
-    # We also need the route-map information from the config
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = {'policy' : {'route-map' : conf.get_config_dict(['policy', 'route-map'],
-                                                          get_first_key=True)}}
-
-    # Merge policy dict into "regular" config dict
-    vrf = dict_merge(tmp, vrf)
     return vrf
 
 def verify(vrf):
@@ -202,13 +191,13 @@ def verify(vrf):
             if tmp != None:
                 for protocol, protocol_options in tmp.items():
                     if 'route_map' in protocol_options:
-                        verify_route_map(protocol_options['route_map'], vrf)
+                        verify_route_map(protocol_options['route_map'], vrf['frr_dict'])
 
             tmp = dict_search('ipv6.protocol', vrf_config)
             if tmp != None:
                 for protocol, protocol_options in tmp.items():
                     if 'route_map' in protocol_options:
-                        verify_route_map(protocol_options['route_map'], vrf)
+                        verify_route_map(protocol_options['route_map'], vrf['frr_dict'])
 
     return None
 

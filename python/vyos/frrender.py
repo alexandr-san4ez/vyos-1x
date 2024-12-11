@@ -32,11 +32,15 @@ def debug(message):
         return
     print(message)
 
-pim_daemon = 'pimd'
-
 frr_protocols = ['babel', 'bfd', 'bgp', 'eigrp', 'isis', 'mpls', 'nhrp',
                  'openfabric', 'ospf', 'ospfv3', 'pim', 'pim6', 'rip',
                  'ripng', 'rpki', 'segment_routing', 'static']
+
+bgp_daemon = 'bgpd'
+isis_daemon = 'isisd'
+mgmt_daemon = 'mgmtd'
+pim_daemon = 'pimd'
+zebra_daemon = 'zebra'
 
 class FRRender:
     def __init__(self):
@@ -99,6 +103,12 @@ class FRRender:
                 output += '\n'
             if 'static' in config_dict and 'deleted' not in config_dict['static']:
                 output += render_to_string('frr/staticd.frr.j2', config_dict['static'])
+                output += '\n'
+            if 'ip' in config_dict and 'deleted' not in config_dict['ip']:
+                output += render_to_string('frr/zebra.route-map.frr.j2', config_dict['ip'])
+                output += '\n'
+            if 'ipv6' in config_dict and 'deleted' not in config_dict['ipv6']:
+                output += render_to_string('frr/zebra.route-map.frr.j2', config_dict['ipv6'])
                 output += '\n'
             return output
 

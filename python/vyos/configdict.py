@@ -829,6 +829,15 @@ def get_frrender_dict(conf, argv=None) -> dict:
     # At least one participating EVPN interface found, add to result dict
     if tmp: dict['interfaces'] = tmp
 
+    # Zebra prefix exchange for Kernel IP/IPv6 and routing protocols
+    for ip_version in ['ip', 'ipv6']:
+        ip_cli_path = ['system', ip_version]
+        ip_dict = conf.get_config_dict(ip_cli_path, key_mangling=('-', '_'),
+                                        get_first_key=True, with_recursive_defaults=True)
+        if ip_dict:
+            ip_dict['afi'] = ip_version
+            dict.update({ip_version : ip_dict})
+
     # Enable SNMP agentx support
     # SNMP AgentX support cannot be disabled once enabled
     if conf.exists(['service', 'snmp']):

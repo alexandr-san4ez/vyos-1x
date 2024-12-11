@@ -202,8 +202,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         if 'bfd_profile' in next_hop_config:
                             self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', next_hop_config['bfd_profile']])
                         if 'bfd_source' in next_hop_config:
-                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop'])
-                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'source-address', next_hop_config['bfd_source']])
+                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source-address', next_hop_config['bfd_source']])
                     if 'segments' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'segments', next_hop_config['segments']])
 

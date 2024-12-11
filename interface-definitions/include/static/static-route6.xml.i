@@ -58,8 +58,14 @@
           </properties>
           <children>
             #include <include/bfd/profile.xml.i>
-            #include <include/static/bfd-multi-hop.xml.i>
-            #include <include/source-address-ipv6.xml.i>
+            <node name="multi-hop">
+              <properties>
+                <help>Configure BFD multi-hop session</help>
+              </properties>
+              <children>
+                #include <include/source-address-ipv6.xml.i>
+              </children>
+            </node>
           </children>
         </node>
       </children>

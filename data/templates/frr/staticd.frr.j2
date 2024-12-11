@@ -15,8 +15,8 @@
 {%     set ip_route = ip_route ~ ' bfd' %}
 {%     if config.bfd.multi_hop is vyos_defined %}
 {%         set ip_route = ip_route ~ ' multi-hop' %}
-{%         if config.bfd.source_address is vyos_defined %}
-{%             set ip_route = ip_route ~ ' source ' ~ config.bfd.source_address %}
+{%         if config.bfd.multi_hop.source_address is vyos_defined %}
+{%             set ip_route = ip_route ~ ' source ' ~ config.bfd.multi_hop.source_address %}
 {%         endif %}
 {%     endif %}
 {%     if config.bfd.profile is vyos_defined %}

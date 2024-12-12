@@ -27,6 +27,7 @@ from vyos.frrender import FRRender
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
@@ -57,7 +58,7 @@ def verify(config_dict):
     return
 
 def generate(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(config_dict)
     return None
 
@@ -93,7 +94,7 @@ def apply(config_dict):
     # running when this script is called first. Skip this part and wait for initial
     # commit of the configuration to trigger this statement
     if is_systemd_service_active('frr.service'):
-        if config_dict and 'frrender_cls' not in config_dict:
+        if config_dict and not is_systemd_service_running('vyos-configd.service'):
             FRRender().apply()
 
     call_dependents()

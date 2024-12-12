@@ -21,6 +21,7 @@ from vyos.config import Config
 from vyos.configdict import get_frrender_dict
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_vrf
+from vyos.utils.process import is_systemd_service_running
 from vyos.frrender import FRRender
 from vyos import ConfigError
 from vyos import airbag
@@ -53,12 +54,12 @@ def verify(config_dict):
         verify_vrf({'vrf': vrf})
 
 def generate(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
     return None
 

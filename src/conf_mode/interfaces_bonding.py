@@ -39,9 +39,11 @@ from vyos.utils.assertion import assert_mac
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.network import interface_exists
+from vyos.utils.process import is_systemd_service_running
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
-from vyos.configdep import set_dependents, call_dependents
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -263,12 +265,12 @@ def verify(bond):
     return None
 
 def generate(bond):
-    if 'frr_dict' in bond and 'frrender_cls' not in bond['frr_dict']:
+    if 'frr_dict' in bond and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(bond['frr_dict'])
     return None
 
 def apply(bond):
-    if 'frr_dict' in bond and 'frrender_cls' not in bond['frr_dict']:
+    if 'frr_dict' in bond and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
 
     b = BondIf(bond['ifname'])

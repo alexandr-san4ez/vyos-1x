@@ -23,6 +23,7 @@ from vyos.configverify import verify_access_list
 from vyos.configverify import verify_prefix_list
 from vyos.frrender import FRRender
 from vyos.utils.dict import dict_search
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -89,12 +90,12 @@ def verify(config_dict):
 
 
 def generate(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
     return None
 

@@ -42,6 +42,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -355,14 +356,13 @@ def verify_ethernet(ethernet):
     return None
 
 def generate(ethernet):
-    if 'frr_dict' in ethernet and 'frrender_cls' not in ethernet['frr_dict']:
+    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(ethernet['frr_dict'])
     return None
 
 def apply(ethernet):
-    if 'frr_dict' in ethernet and 'frrender_cls' not in ethernet['frr_dict']:
+    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
-
     e = EthernetIf(ethernet['ifname'])
     if 'deleted' in ethernet:
         e.remove()
@@ -375,7 +375,6 @@ if __name__ == '__main__':
         c = get_config()
         verify(c)
         generate(c)
-
         apply(c)
     except ConfigError as e:
         print(e)

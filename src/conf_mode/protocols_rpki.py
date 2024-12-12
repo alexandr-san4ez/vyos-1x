@@ -26,8 +26,8 @@ from vyos.frrender import FRRender
 from vyos.pki import wrap_openssh_public_key
 from vyos.pki import wrap_openssh_private_key
 from vyos.utils.dict import dict_search_args
-from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import write_file
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

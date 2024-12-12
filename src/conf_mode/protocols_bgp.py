@@ -30,6 +30,7 @@ from vyos.template import is_interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
 from vyos import ConfigError
 from vyos import airbag
@@ -570,12 +571,12 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
     return None
 

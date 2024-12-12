@@ -34,6 +34,7 @@ from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import popen
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
@@ -206,7 +207,7 @@ def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
 
-    if 'frr_dict' in vrf and 'frrender_cls' not in vrf['frr_dict']:
+    if 'frr_dict' in vrf and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(vrf['frr_dict'])
 
     return None
@@ -349,7 +350,7 @@ def apply(vrf):
             if has_rule(afi, 2000, 'l3mdev'):
                 call(f'ip {afi} rule del pref 2000 l3mdev unreachable')
 
-    if 'frr_dict' in vrf and 'frrender_cls' not in vrf['frr_dict']:
+    if 'frr_dict' in vrf and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
 
     return None

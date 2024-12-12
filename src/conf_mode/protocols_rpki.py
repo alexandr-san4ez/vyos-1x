@@ -26,6 +26,7 @@ from vyos.frrender import FRRender
 from vyos.pki import wrap_openssh_public_key
 from vyos.pki import wrap_openssh_private_key
 from vyos.utils.dict import dict_search_args
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
@@ -94,12 +95,12 @@ def generate(config_dict):
                 write_file(cache_config['ssh']['public_key_file'], wrap_openssh_public_key(public_key_data, public_key_type))
                 write_file(cache_config['ssh']['private_key_file'], wrap_openssh_private_key(private_key_data))
 
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and 'frrender_cls' not in config_dict:
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
     return None
 

@@ -998,6 +998,11 @@ def get_frrender_dict(conf, argv=None) -> dict:
         rpki = conf.get_config_dict(rpki_cli_path, key_mangling=('-', '_'),
                                      get_first_key=True, with_pki=True,
                                      with_recursive_defaults=True)
+        rpki_ssh_key_base = '/run/frr/id_rpki'
+        for cache, cache_config in rpki.get('cache',{}).items():
+            if 'ssh' in cache_config:
+                cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
+                cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
         dict.update({'rpki' : rpki})
     elif conf.exists_effective(rpki_cli_path):
         dict.update({'rpki' : {'deleted' : ''}})

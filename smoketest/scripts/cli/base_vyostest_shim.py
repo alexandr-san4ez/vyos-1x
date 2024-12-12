@@ -113,6 +113,7 @@ class VyOSUnitTestSHIM:
             substring:     search section under the result found by string
             endsubsection: end of the subsection (usually something with "exit")
             """
+            sleep(2)
             command = f'vtysh -c "show run {daemon} no-header"'
             if string:
                 command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'

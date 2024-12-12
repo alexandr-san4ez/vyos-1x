@@ -14,12 +14,12 @@ interfaces {
 protocols {
     static {
         multicast {
-            interface-route 224.0.0.0/24 {
+            interface-route 224.1.0.0/24 {
                 next-hop-interface eth0.203 {
                     distance "10"
                 }
             }
-            route 224.0.0.0/24 {
+            route 224.2.0.0/24 {
                 next-hop 172.18.203.254 {
                     distance "20"
                 }

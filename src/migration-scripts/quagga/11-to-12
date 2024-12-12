@@ -23,6 +23,7 @@ static_base = ['protocols', 'static']
 
 def migrate(config: ConfigTree) -> None:
     # Check for static route/route6 configuration
+    # Migrate static BFD configuration to match FRR possibillities
     for route_route6 in ['route', 'route6']:
         route_route6_base = static_base + [route_route6]
         if not config.exists(route_route6_base):
@@ -52,3 +53,23 @@ def migrate(config: ConfigTree) -> None:
                 config.delete(multi_hop_base)
                 config.set(multi_hop_base + ['source-address'], value=source)
                 config.set(next_hop_base + [next_hop, 'bfd', 'profile'], value=profile)
+
+    # Consolidate static multicast routing configuration under a new node
+    if config.exists(static_base + ['multicast']):
+        for mroute in ['interface-route', 'route']:
+            mroute_base = static_base + ['multicast', mroute]
+            if not config.exists(mroute_base):
+                continue
+            config.set(static_base + ['mroute'])
+            config.set_tag(static_base + ['mroute'])
+            for route in config.list_nodes(mroute_base):
+                config.copy(mroute_base + [route], static_base + ['mroute', route])
+
+        mroute_base = static_base + ['mroute']
+        if config.exists(mroute_base):
+            for mroute in config.list_nodes(mroute_base):
+                interface_path = mroute_base + [mroute, 'next-hop-interface']
+                if config.exists(interface_path):
+                    config.rename(interface_path, 'interface')
+
+        config.delete(static_base + ['multicast'])

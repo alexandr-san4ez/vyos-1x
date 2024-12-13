@@ -19,9 +19,9 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.frrender import pim6_daemon
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = 'pim6d'
 base_path = ['protocols', 'pim6']
 
 class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
@@ -30,7 +30,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsPIMv6, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(pim6_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -40,7 +40,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(pim6_daemon))
 
     def test_pim6_01_mld_simple(self):
         # commit changes
@@ -52,7 +52,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld', config)
             self.assertNotIn(f' ipv6 mld version 1', config)
@@ -65,7 +65,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld', config)
             self.assertIn(f' ipv6 mld version 1', config)
@@ -88,7 +88,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld join-group ff18::1234', config)
 
@@ -100,7 +100,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld join-group ff38::5678 2001:db8::5678', config)
 
@@ -128,14 +128,14 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pim6d configuration
-        config = self.getFRRconfig('router pim6', endsection='^exit', daemon=PROCESS_NAME)
+        config = self.getFRRconfig('router pim6', endsection='^exit', daemon=pim6_daemon)
         self.assertIn(f' join-prune-interval {join_prune_interval}', config)
         self.assertIn(f' keep-alive-timer {keep_alive_timer}', config)
         self.assertIn(f' packets {packets}', config)
         self.assertIn(f' register-suppress-time {register_suppress_time}', config)
 
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
             self.assertIn(f' ipv6 pim drpriority {dr_priority}', config)
             self.assertIn(f' ipv6 pim hello {hello}', config)
             self.assertIn(f' no ipv6 pim bsm', config)

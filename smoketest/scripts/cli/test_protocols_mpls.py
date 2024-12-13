@@ -19,9 +19,9 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.frrender import ldpd_daemon
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = 'ldpd'
 base_path = ['protocols', 'mpls', 'ldp']
 
 peers = {
@@ -71,7 +71,7 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         super(TestProtocolsMPLS, cls).setUpClass()
 
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(ldpd_daemon)
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -82,7 +82,7 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(ldpd_daemon))
 
     def test_mpls_basic(self):
         router_id = '1.2.3.4'
@@ -106,12 +106,12 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Validate configuration
-        frrconfig = self.getFRRconfig('mpls ldp', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('mpls ldp', daemon=ldpd_daemon)
         self.assertIn(f'mpls ldp', frrconfig)
         self.assertIn(f' router-id {router_id}', frrconfig)
 
         # Validate AFI IPv4
-        afiv4_config = self.getFRRconfig(' address-family ipv4', daemon=PROCESS_NAME)
+        afiv4_config = self.getFRRconfig(' address-family ipv4', daemon=ldpd_daemon)
         self.assertIn(f'  discovery transport-address {transport_ipv4_addr}', afiv4_config)
         for interface in interfaces:
             self.assertIn(f'  interface {interface}', afiv4_config)

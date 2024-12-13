@@ -21,7 +21,6 @@ from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
 from vyos.frrender import openfabric_daemon
 
-PROCESS_NAME = 'fabricd'
 base_path = ['protocols', 'openfabric']
 
 domain = 'VyOS'
@@ -37,7 +36,7 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsOpenFabric, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(openfabric_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -47,7 +46,7 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(openfabric_daemon))
 
     def openfabric_base_config(self):
         self.cli_set(['interfaces', 'dummy', dummy_if])

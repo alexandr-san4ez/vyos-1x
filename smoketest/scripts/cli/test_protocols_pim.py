@@ -23,19 +23,18 @@ from vyos.frrender import pim_daemon
 from vyos.ifconfig import Section
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = pim_daemon
 base_path = ['protocols', 'pim']
 
 class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # pimd process must be running
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(process_named_running(pim_daemon))
 
         self.cli_delete(base_path)
         self.cli_commit()
 
         # pimd process must be stopped by now
-        self.assertFalse(process_named_running(PROCESS_NAME))
+        self.assertFalse(process_named_running(pim_daemon))
 
     def test_01_pim_basic(self):
         rp = '127.0.0.1'
@@ -58,11 +57,11 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pimd configuration
-        frrconfig = self.getFRRconfig('router pim', endsection='^exit', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router pim', endsection='^exit', daemon=pim_daemon)
         self.assertIn(f' rp {rp} {group}', frrconfig)
 
         for interface in interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=pim_daemon)
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' ip pim', frrconfig)
             self.assertIn(f' ip pim bfd', frrconfig)
@@ -109,7 +108,7 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pimd configuration
-        frrconfig = self.getFRRconfig('router pim', endsection='^exit', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router pim', endsection='^exit', daemon=pim_daemon)
         self.assertIn(f' no send-v6-secondary', frrconfig)
         self.assertIn(f' rp {rp} {group}', frrconfig)
         self.assertIn(f' register-suppress-time {register_suppress_time}', frrconfig)
@@ -171,11 +170,11 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig(daemon=pim_daemon)
         self.assertIn(f'ip igmp watermark-warn {watermark_warning}', frrconfig)
 
         for interface in interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=pim_daemon)
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' ip igmp', frrconfig)
             self.assertIn(f' ip igmp version {version}', frrconfig)

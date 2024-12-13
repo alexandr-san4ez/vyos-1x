@@ -19,10 +19,10 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.ifconfig import Section
+from vyos.frrender import babel_daemon
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
-PROCESS_NAME = 'babeld'
 base_path = ['protocols', 'babel']
 
 class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
@@ -32,7 +32,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsBABEL, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(babel_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -48,7 +48,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(babel_daemon))
 
     def test_babel_interfaces(self):
         def_update_interval = default_value(base_path + ['interface', 'eth0', 'update-interval'])
@@ -77,11 +77,11 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
         for interface in self._interfaces:
             self.assertIn(f' network {interface}', frrconfig)
 
-            iface_config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            iface_config = self.getFRRconfig(f'interface {interface}', endsection='^exit', daemon=babel_daemon)
             self.assertIn(f' babel channel {channel}', iface_config)
             self.assertIn(f' babel enable-timestamps', iface_config)
             self.assertIn(f' babel update-interval {def_update_interval}', iface_config)
@@ -105,7 +105,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
         for protocol in ipv4_protos:
             self.assertIn(f' redistribute ipv4 {protocol}', frrconfig)
         for protocol in ipv6_protos:
@@ -125,7 +125,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
         self.assertIn(f' babel diversity', frrconfig)
         self.assertIn(f' babel diversity-factor {diversity_factor}', frrconfig)
         self.assertIn(f' babel resend-delay {resend_delay}', frrconfig)
@@ -192,7 +192,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
         self.assertIn(f' distribute-list {access_list_in4} in', frrconfig)
         self.assertIn(f' distribute-list {access_list_out4} out', frrconfig)
         self.assertIn(f' ipv6 distribute-list {access_list_in6} in', frrconfig)

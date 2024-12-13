@@ -22,7 +22,6 @@ from vyos.ifconfig import Section
 from vyos.utils.process import process_named_running
 from vyos.frrender import isis_daemon
 
-PROCESS_NAME = 'isisd'
 base_path = ['protocols', 'isis']
 
 domain = 'VyOS'
@@ -35,7 +34,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsISIS, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(isis_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -50,7 +49,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(isis_daemon))
 
     def isis_base_config(self):
         self.cli_set(base_path + ['net', net])

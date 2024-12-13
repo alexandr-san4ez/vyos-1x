@@ -19,9 +19,9 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.ifconfig import Section
+from vyos.frrender import ripng_daemon
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = 'ripngd'
 acl_in = '198'
 acl_out = '199'
 prefix_list_in = 'foo-prefix'
@@ -36,7 +36,7 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsRIPng, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(ripng_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -70,7 +70,7 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'router ripng', frrconfig)
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(ripng_daemon))
 
     def test_ripng_01_parameters(self):
         metric = '8'

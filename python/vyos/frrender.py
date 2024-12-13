@@ -36,11 +36,19 @@ frr_protocols = ['babel', 'bfd', 'bgp', 'eigrp', 'isis', 'mpls', 'nhrp',
                  'openfabric', 'ospf', 'ospfv3', 'pim', 'pim6', 'rip',
                  'ripng', 'rpki', 'segment_routing', 'static']
 
+babel_daemon = 'babeld'
+bfd_daemon = 'bfdd'
 bgp_daemon = 'bgpd'
 isis_daemon = 'isisd'
+ldpd_daemon = 'ldpd'
 mgmt_daemon = 'mgmtd'
 openfabric_daemon = 'fabricd'
+ospf_daemon = 'ospfd'
+ospf6_daemon = 'ospf6d'
 pim_daemon = 'pimd'
+pim6_daemon = 'pim6d'
+rip_daemon = 'ripd'
+ripng_daemon = 'ripngd'
 zebra_daemon = 'zebra'
 
 class FRRender:

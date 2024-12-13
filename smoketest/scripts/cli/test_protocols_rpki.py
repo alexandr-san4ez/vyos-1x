@@ -19,12 +19,11 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.frrender import bgp_daemon
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'rpki']
-PROCESS_NAME = 'bgpd'
-
 rpki_key_name = 'rpki-smoketest'
 rpki_key_type = 'ssh-rsa'
 
@@ -108,7 +107,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsRPKI, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(bgp_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -121,7 +120,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'rpki', frrconfig)
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(bgp_daemon))
 
     def test_rpki(self):
         expire_interval = '3600'

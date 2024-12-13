@@ -105,7 +105,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon, empty_retry=5)
         for protocol in ipv4_protos:
             self.assertIn(f' redistribute ipv4 {protocol}', frrconfig)
         for protocol in ipv6_protos:

@@ -136,7 +136,7 @@ class FRRender:
             output += '\n'
 
         if 'vrf' in config and 'name' in config['vrf']:
-            output += render_to_string('frr/zebra.vrf.route-map.frr.j2', config['vrf']) + '\n'
+            output += render_to_string('frr/zebra.vrf.route-map.frr.j2', config['vrf'])
             for vrf, vrf_config in config['vrf']['name'].items():
                 if 'protocols' not in vrf_config:
                     continue
@@ -144,6 +144,12 @@ class FRRender:
                     vrf_config['protocols'][protocol]['vrf'] = vrf
 
                 output += inline_helper(vrf_config['protocols'])
+
+        # remove any accidently added empty newline to not confuse FRR
+        output = os.linesep.join([s for s in output.splitlines() if s])
+
+        if '!!' in output:
+            raise ConfigError('FRR configuration contains "!!" which is not allowed')
 
         debug(output)
         debug('======< RENDERING CONFIG COMPLETE >======')

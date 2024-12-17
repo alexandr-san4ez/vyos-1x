@@ -176,11 +176,6 @@ def verify_afi(peer_config, bgp_config):
     return False
 
 def verify(config_dict):
-
-    print('====== verify() ======')
-    import pprint
-    pprint.pprint(config_dict)
-
     if not has_frr_protocol_in_dict(config_dict, 'bgp'):
         return None
 

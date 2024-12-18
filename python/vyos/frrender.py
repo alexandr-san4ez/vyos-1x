@@ -56,9 +56,9 @@ class FRRender:
     def __init__(self):
         self._frr_conf = '/run/frr/config/vyos.frr.conf'
 
-    def generate(self, config):
-        if not isinstance(config, dict):
-            tmp = type(config)
+    def generate(self, config_dict) -> None:
+        if not isinstance(config_dict, dict):
+            tmp = type(config_dict)
             raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
 
         def inline_helper(config_dict) -> str:
@@ -127,18 +127,18 @@ class FRRender:
         output = '!\n'
         # Enable SNMP agentx support
         # SNMP AgentX support cannot be disabled once enabled
-        if 'snmp' in config:
+        if 'snmp' in config_dict:
             output += 'agentx\n'
         # Add routing protocols in global VRF
-        output += inline_helper(config)
+        output += inline_helper(config_dict)
         # Interface configuration for EVPN is not VRF related
-        if 'interfaces' in config:
-            output += render_to_string('frr/evpn.mh.frr.j2', {'interfaces' : config['interfaces']})
+        if 'interfaces' in config_dict:
+            output += render_to_string('frr/evpn.mh.frr.j2', {'interfaces' : config_dict['interfaces']})
             output += '\n'
 
-        if 'vrf' in config and 'name' in config['vrf']:
-            output += render_to_string('frr/zebra.vrf.route-map.frr.j2', config['vrf'])
-            for vrf, vrf_config in config['vrf']['name'].items():
+        if 'vrf' in config_dict and 'name' in config_dict['vrf']:
+            output += render_to_string('frr/zebra.vrf.route-map.frr.j2', config_dict['vrf'])
+            for vrf, vrf_config in config_dict['vrf']['name'].items():
                 if 'protocols' not in vrf_config:
                     continue
                 for protocol in vrf_config['protocols']:

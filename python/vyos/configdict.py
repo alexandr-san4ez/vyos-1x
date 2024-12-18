@@ -19,7 +19,6 @@ A library for retrieving value dicts from VyOS configs in a declarative fashion.
 import os
 import json
 
-from vyos.defaults import frr_debug_enable
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 
@@ -1199,17 +1198,5 @@ def get_frrender_dict(conf, argv=None) -> dict:
                     vrf['name'][vrf_name]['protocols'].update({protocol : tmp})
 
         dict.update({'vrf' : vrf})
-
-    if os.path.exists(frr_debug_enable):
-        print('======== < BEGIN > ==========')
-        import pprint
-        pprint.pprint(dict)
-        print('========= < END > ===========')
-
-    # Use singleton instance of the FRR render class
-    if hasattr(conf, 'frrender_cls'):
-        frrender = getattr(conf, 'frrender_cls')
-        dict.update({'frrender_cls' : frrender})
-        frrender.generate(dict)
 
     return dict

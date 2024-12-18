@@ -28,10 +28,8 @@ from vyos.utils.process import rc_cmd
 from vyos.template import render_to_string
 from vyos import ConfigError
 
-DEBUG_ON = os.path.exists(frr_debug_enable)
-
 def debug(message):
-    if not DEBUG_ON:
+    if not os.path.exists(frr_debug_enable):
         return
     print(message)
 
@@ -124,7 +122,7 @@ class FRRender:
                 output += '\n'
             return output
 
-        debug('======< RENDERING CONFIG >======')
+        debug('FRR:        START CONFIGURATION RENDERING')
         # we can not reload an empty file, thus we always embed the marker
         output = '!\n'
         # Enable SNMP agentx support
@@ -155,23 +153,25 @@ class FRRender:
             raise ConfigError('FRR configuration contains "!!" which is not allowed')
 
         debug(output)
-        debug('======< RENDERING CONFIG COMPLETE >======')
         write_file(self._frr_conf, output)
+        debug('FRR:        RENDERING CONFIG COMPLETE')
+        return None
 
     def apply(self, count_max=5):
         count = 0
         emsg = ''
         while count < count_max:
             count += 1
-            debug(f'FRR: Reloading configuration - tries: {count} | Python class ID: {id(self)}')
+            debug(f'FRR: reloading configuration - tries: {count} | Python class ID: {id(self)}')
             cmdline = '/usr/lib/frr/frr-reload.py --reload'
-            if DEBUG_ON: cmdline += ' --debug'
+            if os.path.exists(frr_debug_enable):
+                cmdline += ' --debug'
             rc, emsg = rc_cmd(f'{cmdline} {self._frr_conf}')
             if rc != 0:
                 sleep(2)
                 continue
             debug(emsg)
-            debug('======< DONE APPLYING CONFIG  >======')
+            debug('FRR: configuration reload complete')
             break
 
         if count >= count_max:

@@ -19,12 +19,12 @@ from sys import argv
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_prefix_list
 from vyos.configverify import verify_route_map
 from vyos.configverify import verify_vrf
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.utils.dict import dict_search

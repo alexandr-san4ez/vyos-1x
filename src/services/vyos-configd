@@ -34,12 +34,12 @@ import zmq
 
 from vyos.defaults import directories
 from vyos.utils.boot import boot_configuration_complete
-from vyos.configdict import get_frrender_dict
 from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
 from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
 
 CFG_GROUP = 'vyattacfg'

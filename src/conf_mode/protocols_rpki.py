@@ -20,9 +20,9 @@ from glob import glob
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.pki import wrap_openssh_public_key
 from vyos.pki import wrap_openssh_private_key
 from vyos.utils.dict import dict_search_args

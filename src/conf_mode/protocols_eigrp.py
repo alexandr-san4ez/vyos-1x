@@ -18,11 +18,11 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_vrf
 from vyos.utils.process import is_systemd_service_running
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

@@ -17,10 +17,10 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.frrender import FRRender
 from vyos.frrender import frr_protocols
+from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError

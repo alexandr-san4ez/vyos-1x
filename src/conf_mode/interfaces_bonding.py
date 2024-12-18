@@ -17,7 +17,6 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configdict import leaf_node_changed
@@ -32,6 +31,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
 from vyos.ifconfig import Section

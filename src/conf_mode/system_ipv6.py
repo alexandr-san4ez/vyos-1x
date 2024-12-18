@@ -20,10 +20,10 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_route_map
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.process import is_systemd_service_active

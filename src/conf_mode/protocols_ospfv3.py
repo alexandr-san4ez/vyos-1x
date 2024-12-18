@@ -18,12 +18,12 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_route_map
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config

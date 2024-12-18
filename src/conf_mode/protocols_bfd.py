@@ -15,10 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.config import Config
-from vyos.configdict import get_frrender_dict
 from vyos.configverify import verify_vrf
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.template import is_ipv6
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import is_systemd_service_running

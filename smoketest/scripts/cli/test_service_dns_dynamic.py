@@ -22,11 +22,10 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
-from vyos.utils.process import process_running
+from vyos.utils.process import process_named_running
 
 DDCLIENT_SYSTEMD_UNIT = '/run/systemd/system/ddclient.service.d/override.conf'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
-DDCLIENT_PID = '/run/ddclient/ddclient.pid'
 DDCLIENT_PNAME = 'ddclient'
 
 base_path = ['service', 'dns', 'dynamic']
@@ -46,14 +45,14 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_running(DDCLIENT_PID))
+        self.assertTrue(process_named_running(DDCLIENT_PNAME))
 
         # Delete DDNS configuration
         self.cli_delete(base_path)
         self.cli_commit()
 
-        # PID file must no londer exist after process exited
-        self.assertFalse(os.path.exists(DDCLIENT_PID))
+        # Check for process not running anymore
+        self.assertFalse(process_named_running(DDCLIENT_PNAME))
 
     # IPv4 standard DDNS service configuration
     def test_01_dyndns_service_standard(self):

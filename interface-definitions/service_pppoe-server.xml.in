@@ -57,6 +57,12 @@
               </completionHelp>
             </properties>
             <children>
+              <leafNode name="combined">
+                <properties>
+                  <help>Listen on both VLANs and the base interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>

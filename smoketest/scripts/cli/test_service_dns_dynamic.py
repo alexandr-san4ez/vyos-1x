@@ -44,7 +44,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_named_running(DDCLIENT_PNAME))
+        self.assertTrue(process_named_running(DDCLIENT_PNAME, timeout=5))
 
         # Delete DDNS configuration
         self.cli_delete(base_path)

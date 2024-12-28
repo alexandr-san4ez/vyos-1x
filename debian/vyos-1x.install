@@ -1,4 +1,5 @@
 etc/commit
+etc/cron.d
 etc/dhcp
 etc/ipsec.d
 etc/logrotate.d

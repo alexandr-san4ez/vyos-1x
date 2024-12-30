@@ -125,13 +125,34 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit')
         self.assertIn(f' babel diversity', frrconfig)
         self.assertIn(f' babel diversity-factor {diversity_factor}', frrconfig)
         self.assertIn(f' babel resend-delay {resend_delay}', frrconfig)
         self.assertIn(f' babel smoothing-half-life {smoothing_half_life}', frrconfig)
 
-    def test_babel_distribute_list(self):
+    def test_02_redistribute(self):
+        ipv4_protos = ['bgp', 'connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
+        ipv6_protos = ['bgp', 'connected', 'isis', 'kernel', 'ospfv3', 'ripng', 'static']
+
+        self.cli_set(base_path + ['interface', self._interfaces[0], 'enable-timestamps'])
+
+        for protocol in ipv4_protos:
+            self.cli_set(base_path + ['redistribute', 'ipv4', protocol])
+        for protocol in ipv6_protos:
+            self.cli_set(base_path + ['redistribute', 'ipv6', protocol])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit', empty_retry=5)
+        for protocol in ipv4_protos:
+            self.assertIn(f' redistribute ipv4 {protocol}', frrconfig)
+        for protocol in ipv6_protos:
+            if protocol == 'ospfv3':
+                protocol = 'ospf6'
+            self.assertIn(f' redistribute ipv6 {protocol}', frrconfig)
+
+    def test_03_distribute_list(self):
         access_list_in4 = '40'
         access_list_out4 = '50'
         access_list_in4_iface = '44'
@@ -192,7 +213,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router babel', endsection='^exit', daemon=babel_daemon)
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit')
         self.assertIn(f' distribute-list {access_list_in4} in', frrconfig)
         self.assertIn(f' distribute-list {access_list_out4} out', frrconfig)
         self.assertIn(f' ipv6 distribute-list {access_list_in6} in', frrconfig)
@@ -213,6 +234,49 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' distribute-list prefix {prefix_list_out4}-{interface} out {interface}', frrconfig)
             self.assertIn(f' ipv6 distribute-list prefix {prefix_list_in6}-{interface} in {interface}', frrconfig)
             self.assertIn(f' ipv6 distribute-list prefix {prefix_list_out6}-{interface} out {interface}', frrconfig)
+
+    def test_04_interfaces(self):
+        def_update_interval = default_value(base_path + ['interface', 'eth0', 'update-interval'])
+        channel = '20'
+        hello_interval = '1000'
+        max_rtt_penalty = '100'
+        rtt_decay = '23'
+        rtt_max = '119'
+        rtt_min = '11'
+        rxcost = '40000'
+        type = 'wired'
+
+        for interface in self._interfaces:
+            self.cli_set(base_path + ['interface', interface])
+            self.cli_set(base_path + ['interface', interface, 'channel', channel])
+            self.cli_set(base_path + ['interface', interface, 'enable-timestamps'])
+            self.cli_set(base_path + ['interface', interface, 'hello-interval', hello_interval])
+            self.cli_set(base_path + ['interface', interface, 'max-rtt-penalty', max_rtt_penalty])
+            self.cli_set(base_path + ['interface', interface, 'rtt-decay', rtt_decay])
+            self.cli_set(base_path + ['interface', interface, 'rtt-max', rtt_max])
+            self.cli_set(base_path + ['interface', interface, 'rtt-min', rtt_min])
+            self.cli_set(base_path + ['interface', interface, 'rxcost', rxcost])
+            self.cli_set(base_path + ['interface', interface, 'split-horizon', 'disable'])
+            self.cli_set(base_path + ['interface', interface, 'type', type])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('router babel', endsection='^exit')
+        for interface in self._interfaces:
+            self.assertIn(f' network {interface}', frrconfig)
+
+            iface_config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+            self.assertIn(f' babel channel {channel}', iface_config)
+            self.assertIn(f' babel enable-timestamps', iface_config)
+            self.assertIn(f' babel update-interval {def_update_interval}', iface_config)
+            self.assertIn(f' babel hello-interval {hello_interval}', iface_config)
+            self.assertIn(f' babel rtt-decay {rtt_decay}', iface_config)
+            self.assertIn(f' babel rtt-max {rtt_max}', iface_config)
+            self.assertIn(f' babel rtt-min {rtt_min}', iface_config)
+            self.assertIn(f' babel rxcost {rxcost}', iface_config)
+            self.assertIn(f' babel max-rtt-penalty {max_rtt_penalty}', iface_config)
+            self.assertIn(f' no babel split-horizon', iface_config)
+            self.assertIn(f' babel {type}', iface_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

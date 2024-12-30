@@ -218,11 +218,11 @@ def get_frrender_dict(conf, argv=None) -> dict:
     # values present on the CLI - that's why we have if conf.exists()
     eigrp_cli_path = ['protocols', 'eigrp']
     if conf.exists(eigrp_cli_path):
-        isis = conf.get_config_dict(eigrp_cli_path, key_mangling=('-', '_'),
-                                    get_first_key=True,
-                                    no_tag_node_value_mangle=True,
-                                    with_recursive_defaults=True)
-        dict.update({'eigrp' : isis})
+        eigrp = conf.get_config_dict(eigrp_cli_path, key_mangling=('-', '_'),
+                                     get_first_key=True,
+                                     no_tag_node_value_mangle=True,
+                                     with_recursive_defaults=True)
+        dict.update({'eigrp' : eigrp})
     elif conf.exists_effective(eigrp_cli_path):
         dict.update({'eigrp' : {'deleted' : ''}})
 
@@ -537,13 +537,24 @@ def get_frrender_dict(conf, argv=None) -> dict:
     return dict
 
 class FRRender:
+    cached_config_dict = {}
     def __init__(self):
         self._frr_conf = '/run/frr/config/vyos.frr.conf'
 
     def generate(self, config_dict) -> None:
+        """
+        Generate FRR configuration file
+        Returns False if no changes to configuration were made, otherwise True
+        """
         if not isinstance(config_dict, dict):
             tmp = type(config_dict)
             raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
+
+
+        if self.cached_config_dict == config_dict:
+            debug('FRR:        NO CHANGES DETECTED')
+            return False
+        self.cached_config_dict = config_dict
 
         def inline_helper(config_dict) -> str:
             output = '!\n'
@@ -639,7 +650,7 @@ class FRRender:
         debug(output)
         write_file(self._frr_conf, output)
         debug('FRR:        RENDERING CONFIG COMPLETE')
-        return None
+        return True
 
     def apply(self, count_max=5):
         count = 0
@@ -649,7 +660,7 @@ class FRRender:
             debug(f'FRR: reloading configuration - tries: {count} | Python class ID: {id(self)}')
             cmdline = '/usr/lib/frr/frr-reload.py --reload'
             if os.path.exists(frr_debug_enable):
-                cmdline += ' --debug'
+                cmdline += ' --debug --stdout'
             rc, emsg = rc_cmd(f'{cmdline} {self._frr_conf}')
             if rc != 0:
                 sleep(2)

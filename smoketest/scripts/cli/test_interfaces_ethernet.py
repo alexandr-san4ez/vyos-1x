@@ -27,11 +27,11 @@ from netifaces import ifaddresses
 from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.frrender import mgmt_daemon
+from vyos.utils.file import read_file
+from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
-from vyos.utils.file import read_file
-from vyos.utils.network import is_ipv6_link_local
 
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -213,15 +213,15 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 out = loads(out)
                 self.assertFalse(out[0]['autonegotiate'])
 
-    def test_ethtool_evpn_uplink_tarcking(self):
+    def test_ethtool_evpn_uplink_tracking(self):
         for interface in self._interfaces:
             self.cli_set(self._base_path + [interface, 'evpn', 'uplink'])
 
         self.cli_commit()
 
         for interface in self._interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=mgmt_daemon)
-            self.assertIn(f' evpn mh uplink', frrconfig)
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+            self.assertIn(' evpn mh uplink', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

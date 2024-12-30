@@ -106,12 +106,14 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Validate configuration
-        frrconfig = self.getFRRconfig('mpls ldp', daemon=ldpd_daemon)
+        frrconfig = self.getFRRconfig('mpls ldp', endsection='^exit')
         self.assertIn(f'mpls ldp', frrconfig)
         self.assertIn(f' router-id {router_id}', frrconfig)
 
         # Validate AFI IPv4
-        afiv4_config = self.getFRRconfig(' address-family ipv4', daemon=ldpd_daemon)
+        afiv4_config = self.getFRRconfig('mpls ldp', endsection='^exit',
+                                         substring=' address-family ipv4',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f'  discovery transport-address {transport_ipv4_addr}', afiv4_config)
         for interface in interfaces:
             self.assertIn(f'  interface {interface}', afiv4_config)

@@ -360,16 +360,23 @@ def get_frrender_dict(conf, argv=None) -> dict:
         static = conf.get_config_dict(static_cli_path, key_mangling=('-', '_'),
                                   get_first_key=True,
                                   no_tag_node_value_mangle=True)
-
-        # T3680 - get a list of all interfaces currently configured to use DHCP
-        tmp = get_dhcp_interfaces(conf)
-        if tmp: static.update({'dhcp' : tmp})
-        tmp = get_pppoe_interfaces(conf)
-        if tmp: static.update({'pppoe' : tmp})
-
         dict.update({'static' : static})
     elif conf.exists_effective(static_cli_path):
         dict.update({'static' : {'deleted' : ''}})
+
+    # T3680 - get a list of all interfaces currently configured to use DHCP
+    tmp = get_dhcp_interfaces(conf)
+    if tmp:
+        if 'static' in dict:
+            dict['static'].update({'dhcp' : tmp})
+        else:
+            dict.update({'static' : {'dhcp' : tmp}})
+    tmp = get_pppoe_interfaces(conf)
+    if tmp:
+        if 'static' in dict:
+            dict['static'].update({'pppoe' : tmp})
+        else:
+            dict.update({'static' : {'pppoe' : tmp}})
 
     # keep a re-usable list of dependent VRFs
     dependent_vrfs_default = {}
@@ -533,6 +540,10 @@ def get_frrender_dict(conf, argv=None) -> dict:
                     vrf['name'][vrf_name]['protocols'].update({protocol : tmp})
 
         dict.update({'vrf' : vrf})
+
+    if os.path.exists(frr_debug_enable):
+        import pprint
+        pprint.pprint(dict)
 
     return dict
 

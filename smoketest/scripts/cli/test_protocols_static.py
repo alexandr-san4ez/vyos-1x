@@ -14,14 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
+from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
+from vyos.template import get_dhcp_router
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
@@ -163,16 +168,18 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestProtocolsStatic, cls).setUpClass()
+        cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
-        cls.cli_set(cls, ['vrf', 'name', 'black', 'table', '43210'])
 
     @classmethod
     def tearDownClass(cls):
+        cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
         super(TestProtocolsStatic, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)
+        self.cli_delete(['vrf'])
         self.cli_commit()
 
         v4route = self.getFRRconfig('ip route', end='')
@@ -181,6 +188,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(v6route)
 
     def test_01_static(self):
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
@@ -315,6 +323,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(tmp, frrconfig)
 
     def test_02_static_table(self):
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         for table in tables:
             for route, route_config in routes.items():
                 route_type = 'route'
@@ -409,6 +418,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
 
     def test_03_static_vrf(self):
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         # Create VRF instances and apply the static routes from above to FRR.
         # Re-read the configured routes and match them if they are programmed
         # properly. This also includes VRF leaking
@@ -566,6 +576,45 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         self.assertNotIn(tmp, frrconfig)
                     else:
                         self.assertIn(tmp, frrconfig)
+
+    def test_05_dhcp_default_route(self):
+        # When running via vyos-build under the QEmu environment a local DHCP
+        # server is available. This test verifies that the default route is set.
+        # When not running under the VyOS QEMU environment, this test is skipped.
+        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', interface]
+        default_distance = default_value(interface_path + ['dhcp-options', 'default-route-distance'])
+        self.cli_set(interface_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        # Wait for dhclient to receive IP address and default gateway
+        sleep(5)
+
+        router = get_dhcp_router(interface)
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+
+        # T6991: Default route is missing when there is no "protocols static"
+        # CLI node entry
+        self.cli_delete(base_path)
+        # We can trigger a FRR reconfiguration and config re-rendering when
+        # we simply disable IPv6 forwarding
+        self.cli_set(['system', 'ipv6', 'disable-forwarding'])
+        self.cli_commit()
+
+        # Re-check FRR configuration that default route is still present
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+
+        # Wait for dhclient to stop
+        while process_named_running('dhclient', cmdline=interface, timeout=10):
+            sleep(0.250)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

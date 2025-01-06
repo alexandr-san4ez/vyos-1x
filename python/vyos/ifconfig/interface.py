@@ -1447,13 +1447,11 @@ class Interface(Control):
             tmp = get_interface_address(self.ifname)
             if tmp and 'addr_info' in tmp:
                 for address_dict in tmp['addr_info']:
-                    if address_dict['family'] == 'inet':
-                       # Only remove dynamic assigned addresses
-                       if 'dynamic' not in address_dict:
-                           continue
-                       address = address_dict['local']
-                       prefixlen = address_dict['prefixlen']
-                       self.del_addr(f'{address}/{prefixlen}')
+                    # Only remove dynamic assigned addresses
+                    if address_dict['family'] == 'inet' and 'dynamic' in address_dict:
+                        address = address_dict['local']
+                        prefixlen = address_dict['prefixlen']
+                        self.del_addr(f'{address}/{prefixlen}')
 
             # cleanup old config files
             for file in [dhclient_config_file, systemd_override_file, dhclient_lease_file]:

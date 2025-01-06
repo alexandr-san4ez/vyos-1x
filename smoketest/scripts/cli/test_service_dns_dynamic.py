@@ -38,9 +38,13 @@ ttl = '300'
 interface = 'eth0'
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        # Always start with a clean CLI instance
-        self.cli_delete(base_path)
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceDDNS, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         # Check for running process
@@ -336,8 +340,8 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for process in VRF
         systemd_override = cmd(f'cat {DDCLIENT_SYSTEMD_UNIT}')
-        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient -file {DDCLIENT_CONF}',
-                      systemd_override)
+        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient ' \
+                      f'--file {DDCLIENT_CONF} --foreground', systemd_override)
 
         # Check for process in VRF
         proc = cmd(f'ip vrf pids {vrf_name}')

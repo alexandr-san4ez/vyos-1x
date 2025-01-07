@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import glob
 import json
@@ -26,10 +27,10 @@ from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 
 base_path = ['container']
-cont_image = 'busybox:stable' # busybox is included in vyos-build
 PROCESS_NAME = 'conmon'
 PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
 
+busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
 
 def cmd_to_json(command):
@@ -42,11 +43,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         super(TestContainer, cls).setUpClass()
 
-        # Load image for smoketest provided in vyos-build
-        try:
-            cmd(f'cat {busybox_image_path} | sudo podman load')
-        except:
-            cls.skipTest(cls, reason='busybox image not available')
+        # Load image for smoketest provided in vyos-1x-smoketest
+        if not os.path.exists(busybox_image_path):
+            cls.fail(cls, f'{busybox_image} image not available')
+        cmd(f'sudo podman load -i {busybox_image_path}')
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -55,9 +55,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         super(TestContainer, cls).tearDownClass()
-
         # Cleanup podman image
-        cmd(f'sudo podman image rm -f {cont_image}')
+        cmd(f'sudo podman image rm -f {busybox_image}')
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -78,7 +77,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['system', 'name-server', '1.1.1.1'])
         self.cli_set(['system', 'name-server', '8.8.8.8'])
 
-        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
         self.cli_set(base_path + ['name', cont_name, 'sysctl', 'parameter', 'kernel.msgmax', 'value', '4096'])
 
@@ -100,7 +99,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         cont_name = 'c2'
 
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
-        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'cpu-quota', '1.25'])
 
         self.cli_commit()
@@ -121,7 +120,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         for ii in range(1, 6):
             name = f'{base_name}-{ii}'
-            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
             self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix).ip + ii)])
 
         # verify() - first IP address of a prefix can not be used by a container
@@ -151,7 +150,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         for ii in range(1, 6):
             name = f'{base_name}-{ii}'
-            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
             self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix).ip + ii)])
 
         # verify() - first IP address of a prefix can not be used by a container
@@ -183,7 +182,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         for ii in range(1, 6):
             name = f'{base_name}-{ii}'
-            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
             self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix4).ip + ii)])
             self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix6).ip + ii)])
 
@@ -217,7 +216,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', net_name, 'no-name-server'])
 
         name = f'{base_name}-2'
-        self.cli_set(base_path + ['name', name, 'image', cont_image])
+        self.cli_set(base_path + ['name', name, 'image', busybox_image])
         self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix).ip + 2)])
         self.cli_commit()
 
@@ -230,7 +229,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         uid = '1001'
 
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
-        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'gid', gid])
 
         # verify() - GID can only be set if UID is set
@@ -252,7 +251,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         for ii in container_list:
             name = f'{base_name}-{ii}'
-            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
             self.cli_set(base_path + ['name', name, 'allow-host-networks'])
 
         self.cli_commit()

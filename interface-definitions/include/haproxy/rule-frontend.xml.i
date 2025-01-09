@@ -50,6 +50,9 @@
               <regex>[-_a-zA-Z0-9]+</regex>
             </constraint>
             <constraintErrorMessage>Server name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
+            <completionHelp>
+              <path>load-balancing reverse-proxy backend</path>
+            </completionHelp>
           </properties>
         </leafNode>
       </children>

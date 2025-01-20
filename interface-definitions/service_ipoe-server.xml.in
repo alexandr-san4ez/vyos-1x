@@ -174,9 +174,33 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="lua-username">
+                <properties>
+                  <help>Username function</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Name of the function in the Lua file to construct usernames with</description>
+                  </valueHelp>
+                  <constraint>
+                      #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                </properties>
+              </leafNode>
               #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>
+          <leafNode name="lua-file">
+            <properties>
+              <help>Lua script file for constructing user names</help>
+              <valueHelp>
+                <format>filename</format>
+                <description>File with Lua script in /config/scripts directory</description>
+              </valueHelp>
+              <constraint>
+                <validator name="file-path" argument="--strict --parent-dir /config/scripts"/>
+              </constraint>
+            </properties>
+          </leafNode>
           #include <include/accel-ppp/client-ip-pool.xml.i>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           #include <include/accel-ppp/default-pool.xml.i>

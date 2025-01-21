@@ -310,13 +310,15 @@ class EthernetIf(Interface):
         rps_cpus = 0
         queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
         if state:
+            cpu_count = os.cpu_count()
+
             # Enable RPS on all available CPUs except CPU0 which we will not
             # utilize so the system has one spare core when it's under high
             # preasure to server other means. Linux sysfs excepts a bitmask
             # representation of the CPUs which should participate on RPS, we
             # can enable more CPUs that are physically present on the system,
             # Linux will clip that internally!
-            rps_cpus = (1 << os.cpu_count()) -1
+            rps_cpus = (1 << cpu_count) - 1
 
             # XXX: we should probably reserve one core when the system is under
             # high preasure so we can still have a core left for housekeeping.
@@ -324,8 +326,19 @@ class EthernetIf(Interface):
             # receive packet steering.
             rps_cpus &= ~1
 
-        for i in range(0, queues):
-            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', f'{rps_cpus:x}')
+            # Convert the bitmask to hexadecimal chunks of 32 bits
+            # Split the bitmask into chunks of up to 32 bits each
+            hex_chunks = []
+            for i in range(0, cpu_count, 32):
+                # Extract the next 32-bit chunk
+                chunk = (rps_cpus >> i) & 0xFFFFFFFF
+                hex_chunks.append(f"{chunk:08x}")
+
+            # Join the chunks with commas
+            rps_cpus = ",".join(hex_chunks)
+
+        for i in range(queues):
+            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', rps_cpus)
 
         # send bitmask representation as hex string without leading '0x'
         return True

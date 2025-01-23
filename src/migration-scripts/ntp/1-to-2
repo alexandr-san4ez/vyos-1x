@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -35,6 +35,11 @@ base_path = ['system', 'ntp']
 new_base_path = ['service', 'ntp']
 if not config.exists(base_path):
     # Nothing to do
+    sys.exit(0)
+
+# T6911: do not migrate NTP configuration if mandatory server is missing
+if not config.exists(base_path + ['server']):
+    config.delete(base_path)
     sys.exit(0)
 
 # config.copy does not recursively create a path, so create ['service'] if

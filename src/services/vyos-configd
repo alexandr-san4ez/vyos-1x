@@ -341,7 +341,7 @@ if __name__ == '__main__':
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
 
-                if res == R_SUCCESS:
+                if res == Response.SUCCESS:
                     tmp = get_frrender_dict(config)
                     if frr.generate(tmp):
                         # only apply a new FRR configuration if anything changed

@@ -63,7 +63,6 @@ interface={{ iface }}
 {%             endif %}
 {%             if iface_config.vlan_mon is vyos_defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
-{%             endif %}
 {%         endif %}
 {%     endfor %}
 {% endif %}

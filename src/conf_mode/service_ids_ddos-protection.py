@@ -21,6 +21,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.template import render
 from vyos.utils.process import call
+from vyos.base import Warning
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -89,6 +90,7 @@ def apply(fastnetmon):
         # Stop fastnetmon service if removed
         call(f'systemctl stop {systemd_service}')
     else:
+        Warning("FastNetMon-based DDoS protection is deprecated and will be removed in VyOS 1.5.0")
         call(f'systemctl reload-or-restart {systemd_service}')
 
     return None

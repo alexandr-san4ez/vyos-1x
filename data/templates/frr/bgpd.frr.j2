@@ -303,7 +303,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%             for protocol, protocol_config in afi_config.redistribute.items() %}
 {%                 if protocol == 'table' %}
 {%                     for table in protocol_config %}
-  redistribute table-direct {{ table }}
+  redistribute table {{ table }}
 {%                     endfor %}
 {%                 else %}
 {%                     set redistribution_protocol = protocol %}

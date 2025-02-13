@@ -712,7 +712,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for proto, proto_config in redistributes.items():
             if proto == 'table' and 'number' in proto_config:
                 for number in proto_config['number']:
-                    self.assertIn(f' redistribute table-direct {number}', frrconfig)
+                    self.assertIn(f' redistribute table {number}', frrconfig)
             else:
                 tmp = f' redistribute {proto}'
                 if 'metric' in proto_config:
@@ -780,9 +780,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 'metric' : '700',
                 'route_map' : 'redistr-ipv6-static',
             },
-            'table' : {
-                'number' : ['100', '120', '130', '140'],
-            },
         }
         for proto, proto_config in redistributes.items():
             proto_path = base_path + ['address-family', 'ipv6-unicast', 'redistribute', proto]
@@ -816,22 +813,18 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(' no bgp ebgp-requires-policy', frrconfig)
 
         for proto, proto_config in redistributes.items():
-            if proto == 'table' and 'number' in proto_config:
-                for number in proto_config['number']:
-                    self.assertIn(f' redistribute table-direct {number}', frrconfig)
-            else:
-                # FRR calls this OSPF6
-                if proto == 'ospfv3':
-                    proto = 'ospf6'
-                tmp = f' redistribute {proto}'
-                if 'metric' in proto_config:
-                    metric = proto_config['metric']
-                    tmp += f' metric {metric}'
-                if 'route_map' in proto_config:
-                    route_map = proto_config['route_map']
-                    tmp += f' route-map {route_map}'
+            # FRR calls this OSPF6
+            if proto == 'ospfv3':
+                proto = 'ospf6'
+            tmp = f' redistribute {proto}'
+            if 'metric' in proto_config:
+                metric = proto_config['metric']
+                tmp += f' metric {metric}'
+            if 'route_map' in proto_config:
+                route_map = proto_config['route_map']
+                tmp += f' route-map {route_map}'
 
-                self.assertIn(tmp, frrconfig)
+            self.assertIn(tmp, frrconfig)
 
         for network, network_config in networks.items():
             self.assertIn(f' network {network}', frrconfig)

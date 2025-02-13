@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -672,14 +672,30 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 'route_map' : 'redistr-ipv4-static',
             },
             'table' : {
-                'number' : ['10', '20', '30', '40'],
+                '10' : {
+                    'metric' : '810',
+                    'route_map' : 'redistr-ipv4-table-10',
+                },
+                '20' : {
+                    'metric' : '820',
+                    'route_map' : 'redistr-ipv4-table-20',
+                },
+                '30' : {
+                    'metric' : '830',
+                    'route_map' : 'redistr-ipv4-table-30',
+                },
             },
         }
         for proto, proto_config in redistributes.items():
             proto_path = base_path + ['address-family', 'ipv4-unicast', 'redistribute', proto]
-            if proto == 'table' and 'number' in proto_config:
-                for number in proto_config['number']:
-                    self.cli_set(proto_path, value=number)
+            if proto == 'table':
+                for table, table_config in proto_config.items():
+                    self.cli_set(proto_path + [table])
+                    if 'metric' in table_config:
+                        self.cli_set(proto_path + [table, 'metric'], value=table_config['metric'])
+                    if 'route_map' in table_config:
+                        self.cli_set(['policy', 'route-map', table_config['route_map'], 'rule', '10', 'action'], value='permit')
+                        self.cli_set(proto_path + [table, 'route-map'], value=table_config['route_map'])
             else:
                 self.cli_set(proto_path)
                 if 'metric' in proto_config:
@@ -710,9 +726,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(' address-family ipv4 unicast', frrconfig)
 
         for proto, proto_config in redistributes.items():
-            if proto == 'table' and 'number' in proto_config:
-                for number in proto_config['number']:
-                    self.assertIn(f' redistribute table {number}', frrconfig)
+            if proto == 'table':
+                for table, table_config in proto_config.items():
+                    tmp = f' redistribute table {table}'
+                    if 'metric' in proto_config:
+                        metric = proto_config['metric']
+                        tmp += f' metric {metric}'
+                    if 'route_map' in proto_config:
+                        route_map = proto_config['route_map']
+                        tmp += f' route-map {route_map}'
+                    self.assertIn(tmp, frrconfig)
             else:
                 tmp = f' redistribute {proto}'
                 if 'metric' in proto_config:
@@ -783,9 +806,14 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         }
         for proto, proto_config in redistributes.items():
             proto_path = base_path + ['address-family', 'ipv6-unicast', 'redistribute', proto]
-            if proto == 'table' and 'number' in proto_config:
-                for number in proto_config['number']:
-                    self.cli_set(proto_path, value=number)
+            if proto == 'table':
+                for table, table_config in proto_config.items():
+                    self.cli_set(proto_path + [table])
+                    if 'metric' in table_config:
+                        self.cli_set(proto_path + [table, 'metric'], value=table_config['metric'])
+                    if 'route_map' in table_config:
+                        self.cli_set(['policy', 'route-map', table_config['route_map'], 'rule', '10', 'action'], value='permit')
+                        self.cli_set(proto_path + [table, 'route-map'], value=table_config['route_map'])
             else:
                 self.cli_set(proto_path)
                 if 'metric' in proto_config:

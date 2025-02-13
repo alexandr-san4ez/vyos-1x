@@ -97,7 +97,7 @@ DIR_ISO_MOUNT: str = f'{DIR_INSTALLATION}/iso_src'
 DIR_DST_ROOT: str = f'{DIR_INSTALLATION}/disk_dst'
 DIR_KERNEL_SRC: str = '/boot/'
 FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
-ISO_DOWNLOAD_PATH: str = '/tmp/vyos_installation.iso'
+ISO_DOWNLOAD_PATH: str = ''
 
 external_download_script = '/usr/libexec/vyos/simple-download.py'
 
@@ -511,6 +511,12 @@ def image_fetch(image_path: str, vrf: str = None,
     Returns:
         Path: a path to a local file
     """
+    import os.path
+    from uuid import uuid4
+
+    global ISO_DOWNLOAD_PATH
+    ISO_DOWNLOAD_PATH = os.path.join(os.path.expanduser("~"), '{0}.iso'.format(uuid4()))
+
     try:
         # check a type of path
         if urlparse(image_path).scheme:

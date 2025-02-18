@@ -26,24 +26,42 @@ from vyos.utils.process import cmd
 
 base_path = ['qos']
 
-def get_tc_qdisc_json(interface) -> dict:
+
+def get_tc_qdisc_json(interface, all=False) -> dict:
     tmp = cmd(f'tc -detail -json qdisc show dev {interface}')
     tmp = loads(tmp)
+
+    if all:
+        return tmp
+
     return next(iter(tmp))
 
-def get_tc_filter_json(interface, direction) -> list:
-    if direction not in ['ingress', 'egress']:
+
+def get_tc_filter_json(interface, direction=None) -> list:
+    if direction not in ['ingress', 'egress', None]:
         raise ValueError()
-    tmp = cmd(f'tc -detail -json filter show dev {interface} {direction}')
+
+    cmd_stmt = f'tc -detail -json filter show dev {interface}'
+    if direction:
+        cmd_stmt += f' {direction}'
+
+    tmp = cmd(cmd_stmt)
     tmp = loads(tmp)
     return tmp
 
-def get_tc_filter_details(interface, direction) -> list:
+
+def get_tc_filter_details(interface, direction=None) -> list:
     # json doesn't contain all params, such as mtu
-    if direction not in ['ingress', 'egress']:
+    if direction not in ['ingress', 'egress', None]:
         raise ValueError()
-    tmp = cmd(f'tc -details filter show dev {interface} {direction}')
+
+    cmd_stmt = f'tc -details filter show dev {interface}'
+    if direction:
+        cmd_stmt += f' {direction}'
+
+    tmp = cmd(cmd_stmt)
     return tmp
+
 
 class TestQoS(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -758,6 +776,167 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         # default
         self.assertIn('filter parent ffff: protocol all pref 255 basic chain 0', tc_filters)
         self.assertIn('action order 1:  police 0x2 rate 1Gbit burst 125000000b mtu 2Kb action drop overhead 0b', tc_filters)
+
+    def test_15_traffic_match_group(self):
+        interface = self._interfaces[0]
+        self.cli_set(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
+        base_policy_path = ['qos', 'policy', 'shaper', 'VyOS-HTB']
+
+        #old syntax
+        self.cli_set(base_policy_path + ['bandwidth', '100mbit'])
+        self.cli_set(base_policy_path + ['class', '10', 'bandwidth', '40%'])
+        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF11', 'ip', 'dscp', 'AF11'])
+        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF41', 'ip', 'dscp', 'AF41'])
+        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF43', 'ip', 'dscp', 'AF43'])
+        self.cli_set(base_policy_path + ['class', '10', 'match', 'CS4', 'ip', 'dscp', 'CS4'])
+        self.cli_set(base_policy_path + ['class', '10', 'priority', '1'])
+        self.cli_set(base_policy_path + ['class', '10', 'queue-type', 'fair-queue'])
+        self.cli_set(base_policy_path + ['class', '20', 'bandwidth', '30%'])
+        self.cli_set(base_policy_path + ['class', '20', 'match', 'EF', 'ip', 'dscp', 'EF'])
+        self.cli_set(base_policy_path + ['class', '20', 'match', 'CS5', 'ip', 'dscp', 'CS5'])
+        self.cli_set(base_policy_path + ['class', '20', 'priority', '2'])
+        self.cli_set(base_policy_path + ['class', '20', 'queue-type', 'fair-queue'])
+        self.cli_set(base_policy_path + ['default', 'bandwidth', '20%'])
+        self.cli_set(base_policy_path + ['default', 'queue-type', 'fair-queue'])
+        self.cli_commit()
+
+        tc_filters_old = cmd(f'tc -details filter show dev {interface}')
+        self.assertIn('match 00280000/00ff0000', tc_filters_old)
+        self.assertIn('match 00880000/00ff0000', tc_filters_old)
+        self.assertIn('match 00980000/00ff0000', tc_filters_old)
+        self.assertIn('match 00800000/00ff0000', tc_filters_old)
+        self.assertIn('match 00a00000/00ff0000', tc_filters_old)
+        self.assertIn('match 00b80000/00ff0000', tc_filters_old)
+        # delete config by old syntax
+        self.cli_delete(base_policy_path)
+        self.cli_delete(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
+        self.cli_commit()
+        self.assertEqual('', cmd(f'tc -s filter show dev {interface}'))
+
+        self.cli_set(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
+        # prepare traffic match group
+        self.cli_set(['qos', 'traffic-match-group', 'VOICE', 'description', 'voice shaper'])
+        self.cli_set(['qos', 'traffic-match-group', 'VOICE', 'match', 'EF', 'ip', 'dscp', 'EF'])
+        self.cli_set(['qos', 'traffic-match-group', 'VOICE', 'match', 'CS5', 'ip', 'dscp', 'CS5'])
+
+        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME_COMMON', 'description', 'real time common filters'])
+        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME_COMMON', 'match', 'AF43', 'ip', 'dscp', 'AF43'])
+        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME_COMMON', 'match', 'CS4', 'ip', 'dscp', 'CS4'])
+
+        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME', 'description', 'real time shaper'])
+        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME', 'match', 'AF41', 'ip', 'dscp', 'AF41'])
+        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME', 'match-group', 'REAL_TIME_COMMON'])
+
+        # new syntax
+        self.cli_set(base_policy_path + ['bandwidth', '100mbit'])
+        self.cli_set(base_policy_path + ['class', '10', 'bandwidth', '40%'])
+        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF11', 'ip', 'dscp', 'AF11'])
+        self.cli_set(base_policy_path + ['class', '10', 'match-group', 'REAL_TIME'])
+        self.cli_set(base_policy_path + ['class', '10', 'priority', '1'])
+        self.cli_set(base_policy_path + ['class', '10', 'queue-type', 'fair-queue'])
+        self.cli_set(base_policy_path + ['class', '20', 'bandwidth', '30%'])
+        self.cli_set(base_policy_path + ['class', '20', 'match-group', 'VOICE'])
+        self.cli_set(base_policy_path + ['class', '20', 'priority', '2'])
+        self.cli_set(base_policy_path + ['class', '20', 'queue-type', 'fair-queue'])
+        self.cli_set(base_policy_path + ['default', 'bandwidth', '20%'])
+        self.cli_set(base_policy_path + ['default', 'queue-type', 'fair-queue'])
+        self.cli_commit()
+
+        self.assertEqual(tc_filters_old, cmd(f'tc -details filter show dev {interface}'))
+
+    def test_16_wrong_traffic_match_group(self):
+        interface = self._interfaces[0]
+        self.cli_set(['qos', 'interface', interface])
+
+        # Can not use both IPv6 and IPv4 in one match
+        self.cli_set(['qos', 'traffic-match-group', '1', 'match', 'one', 'ip', 'dscp', 'EF'])
+        self.cli_set(['qos', 'traffic-match-group', '1', 'match', 'one', 'ipv6', 'dscp', 'EF'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
+        # check contain itself, should commit success
+        self.cli_delete(['qos', 'traffic-match-group', '1', 'match', 'one', 'ipv6'])
+        self.cli_set(['qos', 'traffic-match-group', '1', 'match-group', '1'])
+        self.cli_commit()
+
+        # check cycle dependency, should commit success
+        self.cli_set(['qos', 'traffic-match-group', '1', 'match-group', '3'])
+        self.cli_set(['qos', 'traffic-match-group', '2', 'match', 'one', 'ip', 'dscp', 'CS4'])
+        self.cli_set(['qos', 'traffic-match-group', '2', 'match-group', '1'])
+
+        self.cli_set(['qos', 'traffic-match-group', '3', 'match', 'one', 'ipv6', 'dscp', 'CS4'])
+        self.cli_set(['qos', 'traffic-match-group', '3', 'match-group', '2'])
+        self.cli_commit()
+
+        # inherit from non exist group, should commit success with warning
+        self.cli_set(['qos', 'traffic-match-group', '3', 'match-group', 'unexpected'])
+        self.cli_commit()
+
+    def test_24_policy_shaper_match_ether(self):
+        interface = self._interfaces[0]
+        bandwidth = 250
+        default_bandwidth = 20
+        default_ceil = 30
+        class_bandwidth = 50
+        class_ceil = 80
+
+        shaper_name = f'qos-shaper-{interface}'
+
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'bandwidth', f'{bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'bandwidth', f'{default_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'ceiling', f'{default_ceil}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'queue-type', 'fair-queue'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'bandwidth', f'{class_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'ceiling', f'{class_ceil}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ether', 'protocol', 'all'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ether', 'destination', '0c:89:0a:2e:00:00'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ether', 'source', '0c:89:0a:2e:00:01'])
+
+        # commit changes
+        self.cli_commit()
+
+        config_entries = (
+            f'root rate {bandwidth}Mbit ceil {bandwidth}Mbit',
+            f'prio 0 rate {class_bandwidth}Mbit ceil {class_ceil}Mbit',
+            f'prio 7 rate {default_bandwidth}Mbit ceil {default_ceil}Mbit'
+        )
+
+        output = cmd(f'tc class show dev {interface}')
+
+        for config_entry in config_entries:
+            self.assertIn(config_entry, output)
+
+        filter = get_tc_filter_details(interface)
+        self.assertIn('match 0c890a2e/ffffffff at -8', filter)
+        self.assertIn('match 00010000/ffff0000 at -4', filter)
+        self.assertIn('match 00000c89/0000ffff at -16', filter)
+        self.assertIn('match 0a2e0000/ffffffff at -12', filter)
+
+        for proto in ['802.1Q', '802_2', '802_3', 'aarp', 'aoe', 'arp', 'atalk',
+                      'dec', 'ip', 'ipv6', 'ipx', 'lat', 'localtalk', 'rarp',
+                      'snap', 'x25', 1, 255, 65535]:
+            self.cli_set(
+                base_path + ['policy', 'shaper', shaper_name, 'class', '23',
+                             'match', '10', 'ether', 'protocol', str(proto)])
+            self.cli_commit()
+
+            if isinstance(proto, int):
+                if proto == 1:
+                    self.assertIn(f'filter parent 1: protocol 802_3 pref',
+                                  get_tc_filter_details(interface))
+                else:
+                    self.assertIn(f'filter parent 1: protocol [{proto}] pref',
+                                  get_tc_filter_details(interface))
+
+            elif proto == '0x000C':
+                # see other codes in the iproute2 eg https://github.com/iproute2/iproute2/blob/413cf4f03a9b6a219c94b86f41d67992b0a14b82/include/uapi/linux/if_ether.h#L130
+                self.assertIn(f'filter parent 1: protocol can pref',
+                              get_tc_filter_details(interface))
+
+            else:
+                self.assertIn(f'filter parent 1: protocol {proto} pref',
+                              get_tc_filter_details(interface))
 
 
 if __name__ == '__main__':

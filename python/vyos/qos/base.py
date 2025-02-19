@@ -164,11 +164,11 @@ class QoSBase:
             default_tc += f' red'
 
             qparams = self._calc_random_detect_queue_params(
-                avg_pkt=dict_search('average_packet', config),
-                max_thr=dict_search('maximum_threshold', config),
+                avg_pkt=dict_search('average_packet', config) or 1024,
+                max_thr=dict_search('maximum_threshold', config) or 18,
                 limit=dict_search('queue_limit', config),
                 min_thr=dict_search('minimum_threshold', config),
-                mark_probability=dict_search('mark_probability', config)
+                mark_probability=dict_search('mark_probability', config) or 10
             )
 
             default_tc += f' limit {qparams["limit"]} avpkt {qparams["avg_pkt"]}'

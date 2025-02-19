@@ -777,100 +777,80 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.assertIn('filter parent ffff: protocol all pref 255 basic chain 0', tc_filters)
         self.assertIn('action order 1:  police 0x2 rate 1Gbit burst 125000000b mtu 2Kb action drop overhead 0b', tc_filters)
 
-    def test_15_traffic_match_group(self):
+    def test_18_priority_queue_default(self):
         interface = self._interfaces[0]
-        self.cli_set(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
-        base_policy_path = ['qos', 'policy', 'shaper', 'VyOS-HTB']
+        policy_name = f'qos-policy-{interface}'
 
-        #old syntax
-        self.cli_set(base_policy_path + ['bandwidth', '100mbit'])
-        self.cli_set(base_policy_path + ['class', '10', 'bandwidth', '40%'])
-        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF11', 'ip', 'dscp', 'AF11'])
-        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF41', 'ip', 'dscp', 'AF41'])
-        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF43', 'ip', 'dscp', 'AF43'])
-        self.cli_set(base_policy_path + ['class', '10', 'match', 'CS4', 'ip', 'dscp', 'CS4'])
-        self.cli_set(base_policy_path + ['class', '10', 'priority', '1'])
-        self.cli_set(base_policy_path + ['class', '10', 'queue-type', 'fair-queue'])
-        self.cli_set(base_policy_path + ['class', '20', 'bandwidth', '30%'])
-        self.cli_set(base_policy_path + ['class', '20', 'match', 'EF', 'ip', 'dscp', 'EF'])
-        self.cli_set(base_policy_path + ['class', '20', 'match', 'CS5', 'ip', 'dscp', 'CS5'])
-        self.cli_set(base_policy_path + ['class', '20', 'priority', '2'])
-        self.cli_set(base_policy_path + ['class', '20', 'queue-type', 'fair-queue'])
-        self.cli_set(base_policy_path + ['default', 'bandwidth', '20%'])
-        self.cli_set(base_policy_path + ['default', 'queue-type', 'fair-queue'])
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(
+            base_path
+            + ['policy', 'priority-queue', policy_name, 'description', 'default policy']
+        )
+
         self.cli_commit()
 
-        tc_filters_old = cmd(f'tc -details filter show dev {interface}')
-        self.assertIn('match 00280000/00ff0000', tc_filters_old)
-        self.assertIn('match 00880000/00ff0000', tc_filters_old)
-        self.assertIn('match 00980000/00ff0000', tc_filters_old)
-        self.assertIn('match 00800000/00ff0000', tc_filters_old)
-        self.assertIn('match 00a00000/00ff0000', tc_filters_old)
-        self.assertIn('match 00b80000/00ff0000', tc_filters_old)
-        # delete config by old syntax
-        self.cli_delete(base_policy_path)
-        self.cli_delete(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
-        self.cli_commit()
-        self.assertEqual('', cmd(f'tc -s filter show dev {interface}'))
+        tmp = get_tc_qdisc_json(interface, all=True)
 
-        self.cli_set(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
-        # prepare traffic match group
-        self.cli_set(['qos', 'traffic-match-group', 'VOICE', 'description', 'voice shaper'])
-        self.cli_set(['qos', 'traffic-match-group', 'VOICE', 'match', 'EF', 'ip', 'dscp', 'EF'])
-        self.cli_set(['qos', 'traffic-match-group', 'VOICE', 'match', 'CS5', 'ip', 'dscp', 'CS5'])
+        self.assertEqual(2, len(tmp))
+        self.assertEqual('prio', tmp[0]['kind'])
+        self.assertDictEqual(
+            {
+                'bands': 2,
+                'priomap': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                'multiqueue': False,
+            },
+            tmp[0]['options'],
+        )
+        self.assertEqual('pfifo', tmp[1]['kind'])
+        self.assertDictEqual({'limit': 1000}, tmp[1]['options'])
 
-        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME_COMMON', 'description', 'real time common filters'])
-        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME_COMMON', 'match', 'AF43', 'ip', 'dscp', 'AF43'])
-        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME_COMMON', 'match', 'CS4', 'ip', 'dscp', 'CS4'])
-
-        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME', 'description', 'real time shaper'])
-        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME', 'match', 'AF41', 'ip', 'dscp', 'AF41'])
-        self.cli_set(['qos', 'traffic-match-group', 'REAL_TIME', 'match-group', 'REAL_TIME_COMMON'])
-
-        # new syntax
-        self.cli_set(base_policy_path + ['bandwidth', '100mbit'])
-        self.cli_set(base_policy_path + ['class', '10', 'bandwidth', '40%'])
-        self.cli_set(base_policy_path + ['class', '10', 'match', 'AF11', 'ip', 'dscp', 'AF11'])
-        self.cli_set(base_policy_path + ['class', '10', 'match-group', 'REAL_TIME'])
-        self.cli_set(base_policy_path + ['class', '10', 'priority', '1'])
-        self.cli_set(base_policy_path + ['class', '10', 'queue-type', 'fair-queue'])
-        self.cli_set(base_policy_path + ['class', '20', 'bandwidth', '30%'])
-        self.cli_set(base_policy_path + ['class', '20', 'match-group', 'VOICE'])
-        self.cli_set(base_policy_path + ['class', '20', 'priority', '2'])
-        self.cli_set(base_policy_path + ['class', '20', 'queue-type', 'fair-queue'])
-        self.cli_set(base_policy_path + ['default', 'bandwidth', '20%'])
-        self.cli_set(base_policy_path + ['default', 'queue-type', 'fair-queue'])
-        self.cli_commit()
-
-        self.assertEqual(tc_filters_old, cmd(f'tc -details filter show dev {interface}'))
-
-    def test_16_wrong_traffic_match_group(self):
+    def test_19_priority_queue_default_random_detect(self):
         interface = self._interfaces[0]
-        self.cli_set(['qos', 'interface', interface])
+        policy_name = f'qos-policy-{interface}'
 
-        # Can not use both IPv6 and IPv4 in one match
-        self.cli_set(['qos', 'traffic-match-group', '1', 'match', 'one', 'ip', 'dscp', 'EF'])
-        self.cli_set(['qos', 'traffic-match-group', '1', 'match', 'one', 'ipv6', 'dscp', 'EF'])
-        with self.assertRaises(ConfigSessionError) as e:
-            self.cli_commit()
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(
+            base_path
+            + [
+                'policy',
+                'priority-queue',
+                policy_name,
+                'default',
+                'queue-type',
+                'random-detect',
+            ]
+        )
 
-        # check contain itself, should commit success
-        self.cli_delete(['qos', 'traffic-match-group', '1', 'match', 'one', 'ipv6'])
-        self.cli_set(['qos', 'traffic-match-group', '1', 'match-group', '1'])
         self.cli_commit()
 
-        # check cycle dependency, should commit success
-        self.cli_set(['qos', 'traffic-match-group', '1', 'match-group', '3'])
-        self.cli_set(['qos', 'traffic-match-group', '2', 'match', 'one', 'ip', 'dscp', 'CS4'])
-        self.cli_set(['qos', 'traffic-match-group', '2', 'match-group', '1'])
+        tmp = get_tc_qdisc_json(interface, all=True)
 
-        self.cli_set(['qos', 'traffic-match-group', '3', 'match', 'one', 'ipv6', 'dscp', 'CS4'])
-        self.cli_set(['qos', 'traffic-match-group', '3', 'match-group', '2'])
-        self.cli_commit()
-
-        # inherit from non exist group, should commit success with warning
-        self.cli_set(['qos', 'traffic-match-group', '3', 'match-group', 'unexpected'])
-        self.cli_commit()
+        self.assertEqual(2, len(tmp))
+        self.assertEqual('prio', tmp[0]['kind'])
+        self.assertDictEqual(
+            {
+                'bands': 2,
+                'priomap': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                'multiqueue': False,
+            },
+            tmp[0]['options'],
+        )
+        self.assertEqual('red', tmp[1]['kind'])
+        self.assertDictEqual(
+            {
+                'limit': 73728,
+                'min': 9216,
+                'max': 18432,
+                'ecn': False,
+                'harddrop': False,
+                'adaptive': False,
+                'nodrop': False,
+                'ewma': 3,
+                'probability': 0.1,
+                'Scell_log': 13,
+            },
+            tmp[1]['options'],
+        )
 
     def test_24_policy_shaper_match_ether(self):
         interface = self._interfaces[0]

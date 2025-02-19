@@ -228,6 +228,41 @@ delegate={delegate_1_prefix},{delegate_mask},name={pool_name}
 delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.assertIn(pool_config, config)
 
+    def test_ipoe_server_static_client_ip_address(self):
+        mac_address = '08:00:27:2f:d8:06'
+        ip_address = '192.0.2.100'
+
+        # Test configuration of local authentication for PPPoE server
+        self.basic_config()
+        # Rewrite authentication from basic_config
+        self.set(
+            [
+                'authentication',
+                'interface',
+                interface,
+                'mac',
+                mac_address,
+                'ip-address',
+                ip_address,
+            ]
+        )
+        self.set(['authentication', 'mode', 'local'])
+        # commit changes
+        self.cli_commit()
+
+        # Validate configuration values
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+
+        # basic verification
+        self.verify(conf)
+
+        # check local users
+        tmp = cmd(f'sudo cat {self._chap_secrets}')
+        regex = f'{interface}\s+\*\s+{mac_address}\s+{ip_address}'
+        tmp = re.findall(regex, tmp)
+        self.assertTrue(tmp)
+
     def test_ipoe_server_start_session(self):
         start_session = 'auto'
 

@@ -49,7 +49,7 @@ class GeneveIf(Interface):
             'parameters.ipv6.flowlabel'  : 'flowlabel',
         }
 
-        cmd = 'ip link add name {ifname} type {type} id {vni} remote {remote}'
+        cmd = 'ip link add name {ifname} type {type} id {vni} remote {remote} dstport {port}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence

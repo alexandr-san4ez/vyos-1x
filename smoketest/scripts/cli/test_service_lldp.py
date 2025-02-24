@@ -79,9 +79,9 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'configure system ip management pattern {",".join(mgmt_addr)}', config)
 
     def test_03_lldp_interfaces(self):
-        for interface in Section.interfaces('ethernet'):
-            if not '.' in interface:
-                self.cli_set(base_path + ['interface', interface])
+        interface_list = Section.interfaces('ethernet', vlan=False)
+        for interface in interface_list:
+            self.cli_set(base_path + ['interface', interface])
 
         # commit changes
         self.cli_commit()
@@ -89,21 +89,21 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         # verify configuration
         config = read_file(LLDPD_CONF)
 
-        interface_list = []
-        for interface in Section.interfaces('ethernet'):
-            if not '.' in interface:
-                interface_list.append(interface)
         tmp = ','.join(interface_list)
         self.assertIn(f'configure system interface pattern "{tmp}"', config)
 
     def test_04_lldp_all_interfaces(self):
+        interface_disable = 'eth0'
+
         self.cli_set(base_path + ['interface', 'all'])
+        self.cli_set(base_path + ['interface', interface_disable, 'disable'])
         # commit changes
         self.cli_commit()
 
         # verify configuration
         config = read_file(LLDPD_CONF)
-        self.assertIn(f'configure system interface pattern "*"', config)
+        self.assertIn(f'configure ports {interface_disable} lldp status disable', config)
+        self.assertIn('configure system interface pattern "*,eth0"', config)
 
     def test_05_lldp_location(self):
         interface = 'eth0'

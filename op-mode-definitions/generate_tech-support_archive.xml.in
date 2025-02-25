@@ -12,6 +12,28 @@
               <help>Generate tech support archive</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/generate_tech-support_archive.py</command>
+            <children>
+              <node name="upload">
+                <properties>
+                  <help>Upload to VyOS support server</help>
+                </properties>
+                <children>
+                  <tagNode name="user">
+                    <properties>
+                      <help>Support portal user name</help>
+                    </properties>
+                    <children>
+                      <tagNode name="ticket">
+                        <properties>
+                          <help>Ticket number for support engineer reference</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/generate_tech-support_archive.py --user $6 --ticket $8</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
           </node>
           <tagNode name="archive">
             <properties>

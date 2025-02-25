@@ -114,6 +114,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.com'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.org'])
         self.cli_set(['firewall', 'group', 'interface-group', 'smoketest_interface', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'group', 'interface-group', 'smoketest_interface', 'interface', 'pod-smoketest'])
         self.cli_set(['firewall', 'group', 'interface-group', 'smoketest_interface', 'interface', 'vtun0'])
 
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
@@ -127,6 +128,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'source', 'group', 'domain-group', 'smoketest_domain'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'outbound-interface', 'group', '!smoketest_interface'])
+
+        # Create container network so test won't fail
+        self.cli_set(['container', 'network', 'smoketest', 'prefix', '10.0.0.0/24'])
 
         self.cli_commit()
 

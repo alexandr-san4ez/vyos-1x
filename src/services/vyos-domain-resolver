@@ -58,13 +58,15 @@ def get_config(conf):
 
     firewall = dict_merge(default_values, firewall)
 
-    global timeout, cache
+    if 'global_options' in firewall:
+        global_config = firewall['global_options']
+        global timeout, cache
 
-    if 'resolver_interval' in firewall:
-        timeout = int(firewall['resolver_interval'])
+        if 'resolver_interval' in global_config:
+            timeout = int(global_config['resolver_interval'])
 
-    if 'resolver_cache' in firewall:
-        cache = True
+        if 'resolver_cache' in global_config:
+            cache = True
 
     fqdn_config_parse(firewall)
 

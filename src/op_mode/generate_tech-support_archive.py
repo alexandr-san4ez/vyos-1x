@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -95,6 +95,8 @@ def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
 if __name__ == '__main__':
     defualt_tmp_dir = '/tmp'
     parser = argparse.ArgumentParser()
+    parser.add_argument("--ticket", type=str)
+    parser.add_argument("--user", type=str)
     parser.add_argument("path", nargs='?', default=defualt_tmp_dir)
     args = parser.parse_args()
     location_path = args.path[:-1] if args.path[-1] == '/' else args.path
@@ -105,7 +107,7 @@ if __name__ == '__main__':
     remote = False
     tmp_path = ''
     tmp_dir_path = ''
-    if 'ftp://' in args.path or 'scp://' in args.path:
+    if ('ftp://' in args.path or 'scp://' in args.path) or args.ticket:
         remote = True
         tmp_path = defualt_tmp_dir
     else:
@@ -136,7 +138,15 @@ if __name__ == '__main__':
         rmtree(tmp_dir)
         # Upload to remote site if it is scpecified
         if remote:
-            upload(f'{tmp_path}/{archive_file_name}', args.path)
+            if args.ticket:
+                # XXX: we call curl here because cURL's SFTP can work
+                # without requiring directory listing on the server
+                # Almost everything else requires it and fails to work
+                # with our write-only server.
+                os.system(f'curl --upload-file {tmp_path}/{archive_file_name} \
+                  sftp://ticket-files.vyos.io/{args.ticket}/ --user {args.user}')
+            else:
+                upload(f'{tmp_path}/{archive_file_name}', args.path)
         print(f'Debug file is generated and located in {location_path}/{archive_file_name}')
     except Exception as err:
         print(f'Error during generating a debug file: {err}')

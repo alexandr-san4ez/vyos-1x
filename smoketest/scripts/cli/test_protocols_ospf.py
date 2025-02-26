@@ -255,7 +255,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def test_ospf_07_redistribute(self):
         metric = '15'
         metric_type = '1'
-        redistribute = ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
+        redistribute = ['babel', 'bgp', 'connected', 'isis', 'kernel', 'nhrp', 'rip', 'static']
 
         for protocol in redistribute:
             self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])

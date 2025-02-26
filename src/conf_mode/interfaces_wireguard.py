@@ -19,6 +19,9 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_source_interface
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -54,11 +57,25 @@ def get_config(config=None):
     if is_node_changed(conf, base + [ifname, 'peer']):
         wireguard.update({'rebuild_required': {}})
 
+    # Check if interface is used as source-interface on VXLAN interface
+    tmp = is_source_interface(conf, ifname, 'vxlan')
+    if tmp:
+        if 'deleted' not in wireguard:
+            set_dependents('vxlan', conf, tmp)
+        else:
+            wireguard['is_source_interface'] = tmp
+
     return wireguard
+
 
 def verify(wireguard):
     if 'deleted' in wireguard:
         verify_bridge_delete(wireguard)
+        if 'is_source_interface' in wireguard:
+            raise ConfigError(
+                f'Interface "{wireguard["ifname"]}" cannot be deleted as it is used '
+                f'as source interface for "{wireguard["is_source_interface"]}"!'
+            )
         return None
 
     verify_mtu_ipv6(wireguard)
@@ -103,6 +120,11 @@ def verify(wireguard):
 
         public_keys.append(peer['public_key'])
 
+
+def generate(wireguard):
+    return None
+
+
 def apply(wireguard):
     if 'rebuild_required' in wireguard or 'deleted' in wireguard:
         wg = WireGuardIf(**wireguard)
@@ -119,13 +141,17 @@ def apply(wireguard):
         wg = WireGuardIf(**wireguard)
         wg.update(wireguard)
 
+    call_dependents()
+
     return None
+
 
 if __name__ == '__main__':
     try:
         check_kmod('wireguard')
         c = get_config()
         verify(c)
+        generate(c)
         apply(c)
     except ConfigError as e:
         print(e)

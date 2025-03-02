@@ -22,6 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 from copy import deepcopy
 from glob import glob
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.template import ip_from_cidr
 from vyos.utils.process import cmd

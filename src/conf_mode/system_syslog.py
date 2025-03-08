@@ -22,8 +22,11 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
+from vyos.utils.network import is_addr_assigned
 from vyos.utils.process import call
 from vyos.template import render
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -75,6 +78,19 @@ def verify(syslog):
              if 'protocol' in host_options and host_options['protocol'] == 'udp':
                  if 'format' in host_options and 'octet_counted' in host_options['format']:
                      Warning(f'Syslog UDP transport for "{host}" should not use octet-counted format!')
+
+             if 'source_address' in host_options:
+                vrf = None
+                if 'vrf' in syslog:
+                    vrf = syslog['vrf']
+                if not is_addr_assigned(host_options['source_address'], vrf):
+                    raise ConfigError('No interface with given address specified!')
+
+                source_address = host_options['source_address']
+                if ((is_ipv4(host) and is_ipv6(source_address)) or
+                    (is_ipv6(host) and is_ipv4(source_address))):
+                    raise ConfigError(f'Source-address "{source_address}" does not match '\
+                                      f'address-family of remote "{host}"!')
 
     verify_vrf(syslog)
 

@@ -19,7 +19,9 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
+from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -28,10 +30,22 @@ RSYSLOG_CONF = '/etc/rsyslog.d/00-vyos.conf'
 
 base_path = ['system', 'syslog']
 
+dummy_interface = 'dum372874'
+
 def get_config_value(key):
     tmp = read_file(RSYSLOG_CONF)
     tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
     return tmp[0]
+
+def get_remote_config(string=''):
+    """
+    Retrieve current "running configuration" from FRR
+    string:        search for a specific start string in the configuration
+    """
+    command = 'cat /etc/rsyslog.d/00-vyos.conf'
+    if string:
+        command += f' | sed -n "/^{string}$/,/^)/p"'
+    return cmd(command)
 
 class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -53,31 +67,12 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertFalse(process_named_running(PROCESS_NAME))
 
-    def test_syslog_basic(self):
-        host1 = '127.0.0.10'
-        host2 = '127.0.0.20'
-
-        self.cli_set(base_path + ['host', host1, 'port', '999'])
-        self.cli_set(base_path + ['host', host1, 'facility', 'all', 'level', 'all'])
-        self.cli_set(base_path + ['host', host2, 'facility', 'kern', 'level', 'err'])
+    def test_console(self):
         self.cli_set(base_path + ['console', 'facility', 'all', 'level', 'warning'])
-
         self.cli_commit()
-        # verify log level and facilities in config file
-        # *.warning /dev/console
-        # *.* @198.51.100.1:999
-        # kern.err @192.0.2.1:514
-        config = [
-            get_config_value('\*.\*'),
-            get_config_value('kern.err'),
-            get_config_value('\*.warning'),
-        ]
-        expected = [f'@{host1}:999', f'@{host2}:514', '/dev/console']
 
-        for i in range(0, 3):
-            self.assertIn(expected[i], config[i])
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        config = read_file(RSYSLOG_CONF)
+        self.assertIn('*.warning /dev/console', config)
 
     def test_syslog_global(self):
         hostname = 'vyos123'
@@ -100,32 +95,102 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
 
         for e in expected:
             self.assertIn(e, config)
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_syslog_remote(self):
-        rhost = '169.254.0.1'
-        default_port = default_value(base_path + ['host', rhost, 'port'])
+        dummy_if_path = ['interfaces', 'dummy', dummy_interface]
+        rhosts = {
+            '169.254.0.1': {
+                'facility': {'auth' : {'level': 'info'}},
+                'protocol': 'udp',
+            },
+            '2001:db8::1': {
+                'facility': {'all' : {'level': 'debug'}},
+                'port': '1514',
+                'protocol': 'udp',
+            },
+            'syslog.vyos.net': {
+                'facility': {'all' : {'level': 'debug'}},
+                'port': '1515',
+                'protocol': 'tcp',
+            },
+            '169.254.0.3': {
+                'facility': {'auth' : {'level': 'info'},
+                             'kern' : {'level': 'debug'},
+                             'all'  : {'level': 'notice'},
+                },
+                'format': ['include-timezone', 'octet-counted'],
+                'protocol': 'tcp',
+                'port': '10514',
+                'source_address': '172.29.0.1',
+            },
+        }
+        default_port = default_value(base_path + ['host', next(iter(rhosts)), 'port'])
+        default_protocol = default_value(base_path + ['host', next(iter(rhosts)), 'protocol'])
 
         self.cli_set(base_path + ['global', 'facility', 'all', 'level', 'info'])
         self.cli_set(base_path + ['global', 'facility', 'local7', 'level', 'debug'])
-        self.cli_set(base_path + ['host', rhost, 'facility', 'all', 'level', 'all'])
-        self.cli_set(base_path + ['host', rhost, 'protocol', 'tcp'])
+
+        for remote, remote_options in rhosts.items():
+            remote_base = base_path + ['host', remote]
+            if 'port' in remote_options:
+                self.cli_set(remote_base + ['port', remote_options['port']])
+
+            if 'facility' in remote_options:
+                for facility, facility_options in remote_options['facility'].items():
+                    level = facility_options['level']
+                    self.cli_set(remote_base + ['facility', facility, 'level', level])
+
+            if 'format' in remote_options:
+                for format in remote_options['format']:
+                    self.cli_set(remote_base + ['format', format])
+
+            if 'protocol' in remote_options:
+                protocol = remote_options['protocol']
+                self.cli_set(remote_base + ['protocol', protocol])
+
+            if 'source_address' in remote_options:
+                source_address = remote_options['source_address']
+                self.cli_set(remote_base + ['source-address', source_address])
+
+                # check validate() - source address does not exist
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+                self.cli_set(dummy_if_path + ['address', f'{source_address}/32'])
 
         self.cli_commit()
 
-        config = read_file(RSYSLOG_CONF)
-        self.assertIn(f'*.* @@{rhost}:{default_port}', config)
+        for remote, remote_options in rhosts.items():
+            config = get_remote_config(f'# Remote syslog to {remote}')
 
-        # Change default port and enable "octet-counting" mode
-        port = '10514'
-        self.cli_set(base_path + ['host', rhost, 'port', port])
-        self.cli_set(base_path + ['host', rhost, 'format', 'octet-counted'])
-        self.cli_commit()
+            filter = []
+            if 'facility' in remote_options:
+                for facility, facility_options in remote_options['facility'].items():
+                    level = facility_options['level']
+                    if facility == 'all':
+                        facility = '*'
+                    filter.append(f'{facility}.{level}')
 
-        config = read_file(RSYSLOG_CONF)
-        self.assertIn(f'*.* @@(o){rhost}:{port}', config)
+            filter.sort()
+            filter = ';'.join(filter)
+            self.assertIn(f'{filter} action(type="omfwd"', config)
+            self.assertIn(f'target="{remote}"', config)
 
+            port = default_port
+            if 'port' in remote_options:
+                port = remote_options['port']
+            self.assertIn(f'port="{port}"', config)
+
+            protocol = default_protocol
+            if 'protocol' in remote_options:
+                protocol = remote_options['protocol']
+            self.assertIn(f'protocol="{protocol}"', config)
+
+            if 'source_address' in remote_options:
+                source_address = remote_options['source_address']
+                self.assertIn(f'Address="{source_address}"', config)
+
+        # cleanup dummy interface
+        self.cli_delete(dummy_if_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright (C) 2019-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,6 +15,7 @@
 from netifaces import AF_INET
 from netifaces import AF_INET6
 from netifaces import ifaddresses
+from systemd import journal
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -1041,7 +1042,7 @@ class BasicInterfaceTest:
 
             duid_base = 10
             for interface in self._interfaces:
-                duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
+                duid = f'00:01:00:01:27:71:db:f0:00:50:00:00:00:{duid_base}'
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
                     self.cli_set(path + option.split())
@@ -1058,7 +1059,7 @@ class BasicInterfaceTest:
 
             duid_base = 10
             for interface in self._interfaces:
-                duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
+                duid = f'00:01:00:01:27:71:db:f0:00:50:00:00:00:{duid_base}'
                 dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
                 self.assertIn(f'interface {interface} ' + '{', dhcpc6_config)
                 self.assertIn(f'  request domain-name-servers;', dhcpc6_config)
@@ -1070,10 +1071,19 @@ class BasicInterfaceTest:
                 self.assertIn('};', dhcpc6_config)
                 duid_base += 1
 
+                # T7058: verify daemon has no problems understanding the custom DUID option
+                j = journal.Reader()
+                j.this_boot()
+                j.add_match(_SYSTEMD_UNIT=f'dhcp6c@{interface}.service')
+                for entry in j:
+                    self.assertNotIn('yyerror0', entry.get('MESSAGE', ''))
+                    self.assertNotIn('syntax error', entry.get('MESSAGE', ''))
+
                 # Better ask the process about it's commandline in the future
                 pid = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
                 self.assertTrue(pid)
 
+                # DHCPv6 option "no-release" requires "-n" daemon startup option
                 dhcp6c_options = read_file(f'/proc/{pid}/cmdline')
                 self.assertIn('-n', dhcp6c_options)
 

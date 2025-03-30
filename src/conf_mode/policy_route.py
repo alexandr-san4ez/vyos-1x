@@ -27,13 +27,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-<<<<<<< HEAD
-=======
-from vyos.utils.network import get_vrf_tableid
-from vyos.defaults import rt_global_table
-from vyos.defaults import rt_global_vrf
 from vyos.firewall import geoip_update
->>>>>>> 795154d90 (geoip: T5636: Add geoip for policy route/route6)
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

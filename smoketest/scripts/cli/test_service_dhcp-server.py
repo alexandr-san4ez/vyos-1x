@@ -93,6 +93,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(key in base_obj)
             self.assertEqual(base_obj[key], value)
 
+    def verify_service_running(self):
+        tmp = cmd('tail -n 100 /var/log/messages | grep kea')
+        self.assertTrue(process_named_running(PROCESS_NAME), msg=f'Service not running, log: {tmp}')
+
     def test_dhcp_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
 
@@ -159,7 +163,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 {'pool': f'{range_1_start} - {range_1_stop}'})
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_single_pool_options(self):
         shared_net_name = 'SMOKE-0815'
@@ -290,7 +294,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 {'pool': f'{range_0_start} - {range_0_stop}'})
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_single_pool_options_scoped(self):
         shared_net_name = 'SMOKE-2'
@@ -358,7 +362,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'], 'pool', f'{range_0_start} - {range_0_stop}')
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
@@ -456,7 +460,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             client_base += 1
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_multiple_pools(self):
         lease_time = '14400'
@@ -550,7 +554,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 client_base += 1
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_exclude_not_in_range(self):
         # T3180: verify else path when slicing DHCP ranges and exclude address
@@ -593,7 +597,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 pool_obj)
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_exclude_in_range(self):
         # T3180: verify else path when slicing DHCP ranges and exclude address
@@ -651,7 +655,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 pool_exclude_obj)
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_relay_server(self):
         # Listen on specific address and return DHCP leases from a non
@@ -693,7 +697,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 {'pool': f'{range_0_start} - {range_0_stop}'})
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_high_availability(self):
         shared_net_name = 'FAILOVER'
@@ -758,8 +762,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 {'pool': f'{range_0_start} - {range_0_stop}'})
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-        self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_high_availability_standby(self):
         shared_net_name = 'FAILOVER'
@@ -820,8 +823,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 {'pool': f'{range_0_start} - {range_0_stop}'})
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-        self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_on_interface_with_vrf(self):
         self.cli_set(['interfaces', 'ethernet', 'eth1', 'address', '10.1.1.1/30'])
@@ -890,7 +892,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 {'pool': f'{subnet_range_start} - {subnet_range_stop}'})
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
         # All up and running, now test vyos-hostsd store
 

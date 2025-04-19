@@ -22,6 +22,7 @@ from copy import deepcopy
 from glob import glob
 
 from ipaddress import IPv4Network
+from ipaddress import IPv6Interface
 from netifaces import ifaddresses
 # this is not the same as socket.AF_INET/INET6
 from netifaces import AF_INET
@@ -848,7 +849,8 @@ class Interface(Control):
             return None
         rc = self.set_interface('ipv6_autoconf', autoconf)
         if autoconf == '0':
-            self.flush_ipv6_slaac_addrs()
+            flushed = self.flush_ipv6_slaac_addrs()
+            self.flush_ipv6_slaac_routes(flushed)
         return rc
 
     def add_ipv6_eui64_address(self, prefix):
@@ -1239,12 +1241,13 @@ class Interface(Control):
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
 
-    def flush_ipv6_slaac_addrs(self):
+    def flush_ipv6_slaac_addrs(self) -> list:
         """
         Flush all IPv6 addresses installed in response to router advertisement
         messages from this interface.
 
         Will raise an exception on error.
+        Will return a list of flushed IPv6 addresses.
         """
         tmp = get_interface_address(self.ifname)
         if 'addr_info' not in tmp:
@@ -1255,6 +1258,7 @@ class Interface(Control):
         # 'prefixlen': 64, 'scope': 'global', 'dynamic': True,
         # 'mngtmpaddr': True, 'protocol': 'kernel_ra',
         # 'valid_life_time': 2591987, 'preferred_life_time': 14387}
+        flushed = []
         for addr_info in tmp['addr_info']:
             if 'protocol' not in addr_info:
                 continue
@@ -1262,8 +1266,44 @@ class Interface(Control):
                 addr_info['scope'] == 'global'):
                 # Flush IPv6 addresses installed by router advertisement
                 ra_addr = f"{addr_info['local']}/{addr_info['prefixlen']}"
+                flushed.append(ra_addr)
                 cmd = f'ip -6 addr del dev {self.ifname} {ra_addr}'
                 self._cmd(cmd)
+        return flushed
+
+    def flush_ipv6_slaac_routes(self, ra_addrs: list=[]) -> None:
+        """
+        Flush IPv6 default routes installed in response to router advertisement
+        messages from this interface.
+
+        Will raise an exception on error.
+        """
+        # Do not flush default route if interface uses DHCPv6 in addition to SLAAC
+        if 'address' in self.config and 'dhcpv6' in self.config['address']:
+            return None
+
+        # Find IPv6 connected prefixes for flushed SLAAC addresses
+        connected = []
+        for addr in ra_addrs:
+            connected.append(str(IPv6Interface(addr).network))
+
+        tmp = self._cmd(f'ip -j -6 route show dev {self.ifname}')
+        tmp = json.loads(tmp)
+        # Parse interface routes. Example data:
+        # {'dst': 'default', 'gateway': 'fe80::250:56ff:feb3:cdba',
+        # 'protocol': 'ra', 'metric': 1024, 'flags': [], 'expires': 1398,
+        # 'metrics': [{'hoplimit': 64}], 'pref': 'medium'}
+        for route in tmp:
+            # If it's a default route received from RA, delete it
+            if (dict_search('dst', route) == 'default' and
+                dict_search('protocol', route) == 'ra'):
+                self._cmd(f'ip -6 route del default via {route["gateway"]} dev {self.ifname}')
+            # Remove connected prefixes received from RA
+            if dict_search('dst', route) in connected:
+                # If it's a connected prefix, delete it
+                self._cmd(f'ip -6 route del {route["dst"]} dev {self.ifname}')
+
+        return None
 
     def add_to_bridge(self, bridge_dict):
         """

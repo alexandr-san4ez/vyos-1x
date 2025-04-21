@@ -33,6 +33,7 @@ from vyos.utils.dict import dict_set_nested
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmd
+from vyos.utils.network import interface_exists
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import call
 from vyos.configquery import op_mode_config_dict
@@ -398,6 +399,8 @@ def _format_kernel_data(data, detail, statistics):
         tmpInfo['alternate_names'] = interface.get('altnames', '')
         tmpInfo['minimum_mtu'] = interface.get('min_mtu', '')
         tmpInfo['maximum_mtu'] = interface.get('max_mtu', '')
+        rx_stats = interface.get('stats64', {}).get('rx')
+        tx_stats = interface.get('stats64', {}).get('tx')
         tmpInfo['rx_packets'] = rx_stats.get('packets', "")
         tmpInfo['rx_bytes'] = rx_stats.get('bytes', "")
         tmpInfo['rx_errors'] = rx_stats.get('errors', "")
@@ -441,7 +444,18 @@ def _format_kernel_data(data, detail, statistics):
                             *(['\n'.join(tmpInfo['alternate_names'])] if detail else []),
                             *([tmpInfo['minimum_mtu']] if detail else []),
                             *([tmpInfo['maximum_mtu']] if detail else []),
-                            *(stat_list if any([detail, statistics]) else [])])
+                            *([tmpInfo['rx_packets']] if detail else []),
+                            *([tmpInfo['rx_bytes']] if detail else []),
+                            *([tmpInfo['rx_errors']] if detail else []),
+                            *([tmpInfo['rx_dropped']] if detail else []),
+                            *([tmpInfo['rx_over_errors']] if detail else []),
+                            *([tmpInfo['multicast']] if detail else []),
+                            *([tmpInfo['tx_packets']] if detail else []),
+                            *([tmpInfo['tx_bytes']] if detail else []),
+                            *([tmpInfo['tx_errors']] if detail else []),
+                            *([tmpInfo['tx_dropped']] if detail else []),
+                            *([tmpInfo['tx_carrier_errors']] if detail else []),
+                            *([tmpInfo['tx_collisions']] if detail else [])])
 
     return output_list
 

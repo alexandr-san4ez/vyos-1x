@@ -110,7 +110,7 @@ def get_properties(p):
                 comp_exprs.append("/bin/cli-shell-api listActiveNodes {0} | sed -e \"s/'//g\" && echo".format(i.text))
             for i in scripts:
                 comp_exprs.append("{0}".format(i.text))
-            comp_help = " && ".join(comp_exprs)
+            comp_help = " ; ".join(comp_exprs)
             props["comp_help"] = comp_help
     except:
         props["comp_help"] = []

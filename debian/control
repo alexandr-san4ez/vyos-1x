@@ -156,7 +156,7 @@ Depends:
   python3-xmltodict,
   python3-zmq,
   qrencode,
-  radvd,
+  radvd (>= 2.20),
   salt-minion,
   sed,
   smartmontools,

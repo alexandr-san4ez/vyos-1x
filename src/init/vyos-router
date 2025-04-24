@@ -453,6 +453,9 @@ start ()
     if [[ ! -z "$tmp" ]]; then
         vtysh -c "rpki start"
     fi
+
+    # Start netplug daemon
+    systemctl start netplug.service
 }
 
 stop()
@@ -470,6 +473,7 @@ stop()
     umount ${vyatta_configdir}
     log_action_end_msg $?
 
+    systemctl stop netplug.service
     systemctl stop frr.service
 }
 

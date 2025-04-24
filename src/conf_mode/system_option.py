@@ -101,6 +101,10 @@ def generate(options):
     render(ssh_config, 'system/ssh_config.j2', options)
     render(usb_autosuspend, 'system/40_usb_autosuspend.j2', options)
 
+    # XXX: This code path and if statements must be kept in sync with the Kernel
+    # option handling in image_installer.py:get_cli_kernel_options(). This
+    # occurance is used for having the appropriate options passed to GRUB
+    # when re-configuring options on the CLI.
     cmdline_options = []
     if 'kernel' in options:
         if 'disable_mitigations' in options['kernel']:

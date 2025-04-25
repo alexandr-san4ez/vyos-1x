@@ -97,10 +97,22 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
-        def getFRRconfig(self, string=None, end='$', endsection='^!', daemon=''):
-            """ Retrieve current "running configuration" from FRR """
+        def getFRRconfig(self, string=None, end='$', endsection='^!',
+                         substring=None, endsubsection=None, daemon=''):
+            """
+            Retrieve current "running configuration" from FRR
+
+            string:        search for a specific start string in the configuration
+            end:           end of the section to search for (line ending)
+            endsection:    end of the configuration
+            substring:     search section under the result found by string
+            endsubsection: end of the subsection (usually something with "exit")
+            """
             command = f'vtysh -c "show run {daemon} no-header"'
-            if string: command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
+            if string:
+                command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
+                if substring and endsubsection:
+                    command += f' | sed -n "/^{substring}/,/{endsubsection}/p"'
             out = cmd(command)
             if self.debug:
                 print(f'\n\ncommand "{command}" returned:\n')

@@ -116,7 +116,7 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.assertIn(f'  interface {interface}', afiv4_config)
 
-    def test_02_mpls_disable_establish_hello(self):
+    def test_mpls_disable_establish_hello(self):
         router_id = '1.2.3.4'
         transport_ipv4_addr = '5.6.7.8'
         transport_ipv6_addr = '2001:db8:1111::1111'

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -142,6 +142,7 @@ def get_config(config=None):
     if len(argv) > 1 and argv[1] == 'certbot_renew':
         pki['certbot_renew'] = {}
 
+<<<<<<< HEAD
     tmp = node_changed(conf, base + ['ca'], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
@@ -171,6 +172,21 @@ def get_config(config=None):
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'openvpn' : tmp})
+=======
+
+    # Walk through the list of sync_translate mapping and build a list
+    # which is later used to check if the node was changed in the CLI config
+    changed_keys = []
+    for value in sync_translate.values():
+        if value not in changed_keys:
+            changed_keys.append(value)
+    # Check for changes to said given keys in the CLI config
+    for key in changed_keys:
+        tmp = node_changed(conf, base + [key], recursive=True, expand_nodes=Diff.DELETE | Diff.ADD)
+        if 'changed' not in pki:
+            pki.update({'changed':{}})
+        pki['changed'].update({key.replace('-', '_') : tmp})
+>>>>>>> b433f9d48 (pki: T7122: remove duplicate list definition - can be auto generated)
 
     # We only merge on the defaults of there is a configuration at all
     if conf.exists(base):

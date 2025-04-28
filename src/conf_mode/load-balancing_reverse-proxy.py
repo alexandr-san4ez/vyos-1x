@@ -22,6 +22,7 @@ from shutil import rmtree
 from vyos.config import Config
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
+from vyos.defaults import internal_ports
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
@@ -58,6 +59,14 @@ def get_config(config=None):
                               with_recursive_defaults=True,
                               with_pki=True)
 
+    lb['certbot_port'] = internal_ports['certbot_haproxy']
+
+    if 'service' in lb:
+        for front, front_config in lb['service'].items():
+            for cert in dict_search('ssl.certificate', front_config) or []:
+                if dict_search(f'pki.certificate.{cert}.acme', lb):
+                    lb['service'][front]['ssl'].update({'acme_certificate': {}})
+
     return lb
 
 def verify(lb):
@@ -77,6 +86,9 @@ def verify(lb):
         if check_port_availability(tmp_address, int(tmp_port), 'tcp') is not True and \
                 not is_listen_port_bind_service(int(tmp_port), 'haproxy'):
             raise ConfigError(f'TCP port "{tmp_port}" is used by another service')
+
+        for cert in dict_search('ssl.certificate', front_config) or []:
+            verify_pki_certificate(lb, cert)
 
     for back, back_config in lb['backend'].items():
         if 'http_check' in back_config:
@@ -105,19 +117,14 @@ def verify(lb):
             if {'no_verify', 'ca_certificate'} <= set(back_config['ssl']):
                 raise ConfigError(f'backend {back} cannot have both ssl options no-verify and ca-certificate set!')
 
+            tmp = dict_search('ssl.ca_certificate', back_config)
+            if tmp: verify_pki_ca_certificate(lb, tmp)
+
     # Check if http-response-headers are configured in any frontend/backend where mode != http
     for group in ['service', 'backend']:
         for config_name, config in lb[group].items():
             if 'http_response_headers' in config and config['mode'] != 'http':
                 raise ConfigError(f'{group} {config_name} must be set to http mode to use http_response_headers!')
-
-    for front, front_config in lb['service'].items():
-        for cert in dict_search('ssl.certificate', front_config) or []:
-            verify_pki_certificate(lb, cert)
-
-    for back, back_config in lb['backend'].items():
-        tmp = dict_search('ssl.ca_certificate', back_config)
-        if tmp: verify_pki_ca_certificate(lb, tmp)
 
 
 def generate(lb):

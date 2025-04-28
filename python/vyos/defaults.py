@@ -36,6 +36,10 @@ directories = {
   'dhcp6_client_dir' : '/run/dhcp6c',
 }
 
+internal_ports = {
+    'certbot_haproxy' : 65080, # Certbot running behing haproxy
+}
+
 config_status = '/tmp/vyos-config-status'
 api_config_state = '/run/http-api-state'
 

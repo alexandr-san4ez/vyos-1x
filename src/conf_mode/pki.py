@@ -19,6 +19,7 @@ import os
 from sys import argv
 from sys import exit
 
+from vyos.base import Message
 from vyos.config import Config
 from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents
@@ -263,7 +264,7 @@ def get_config(config=None):
 
                         path = search['path']
                         path_str = ' '.join(path + found_path).replace('_','-')
-                        print(f'PKI: Updating config: {path_str} {item_name}')
+                        Message(f'Updating configuration: "{path_str} {item_name}"')
 
                         if path[0] == 'interfaces':
                             ifname = found_path[0]
@@ -511,6 +512,37 @@ def generate(pki):
             if cert not in certbot_list:
                 # certificate is no longer active on the CLI - remove it
                 certbot_delete(cert)
+<<<<<<< HEAD
+=======
+                continue
+            # ACME not enabled for individual certificate - bail out early
+            if 'acme' not in pki['certificate'][cert]:
+                continue
+
+            # Read in ACME certificate chain information
+            tmp = read_file(f'{vyos_certbot_dir}/live/{cert}/chain.pem')
+            tmp = load_certificate(tmp, wrap_tags=False)
+            cert_chain_base64 = "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
+
+            # Check if CA chain certificate is already present on CLI to avoid adding
+            # a duplicate. This only checks for manual added CA certificates and not
+            # auto added ones with the AUTOCHAIN_ prefix
+            autochain_prefix = 'AUTOCHAIN_'
+            ca_cert_present = False
+            if 'ca' in pki:
+                for ca_base64, cli_path in dict_search_recursive(pki['ca'], 'certificate'):
+                    # Ignore automatic added CA certificates
+                    if any(item.startswith(autochain_prefix) for item in cli_path):
+                        continue
+                    if cert_chain_base64 == ca_base64:
+                        ca_cert_present = True
+
+            if not ca_cert_present:
+                tmp = dict_search_args(pki, 'ca', f'{autochain_prefix}{cert}', 'certificate')
+                if not bool(tmp) or tmp != cert_chain_base64:
+                    Message(f'Add/replace automatically imported CA certificate for "{cert}"...')
+                    add_cli_node(['pki', 'ca', f'{autochain_prefix}{cert}', 'certificate'], value=cert_chain_base64)
+>>>>>>> 40a99b1d0 (vyos.base: T7122: add new Message() helper wrapper for print())
 
     return None
 

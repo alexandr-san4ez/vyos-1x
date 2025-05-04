@@ -36,6 +36,10 @@ directories = {
   'dhcp6_client_dir' : '/run/dhcp6c',
 }
 
+systemd_services = {
+    'haproxy' : 'haproxy.service',
+}
+
 internal_ports = {
     'certbot_haproxy' : 65080, # Certbot running behing haproxy
 }

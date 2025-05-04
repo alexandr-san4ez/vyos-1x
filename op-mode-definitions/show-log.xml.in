@@ -408,6 +408,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit uacctd.service</command>
           </leafNode>
+          <leafNode name="haproxy">
+            <properties>
+              <help>Show log for HAProxy</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit haproxy.service</command>
+          </leafNode>
           <leafNode name="https">
             <properties>
               <help>Show log for HTTPs</help>

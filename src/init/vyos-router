@@ -391,6 +391,12 @@ start ()
         touch /tmp/vyos.smoketest.debug
     fi
 
+    # Cleanup PKI CAs
+    if [ -d /usr/local/share/ca-certificates/vyos ]; then
+        rm -f /usr/local/share/ca-certificates/vyos/*.crt
+        update-ca-certificates >/dev/null 2>&1
+    fi
+
     log_action_begin_msg "Mounting VyOS Config"
     # ensure the vyatta_configdir supports a large number of inodes since
     # the config hierarchy is often inode-bound (instead of size).

@@ -34,6 +34,15 @@ directories = {
   'vyos_udev_dir' : '/run/udev/vyos',
   'isc_dhclient_dir' : '/run/dhclient',
   'dhcp6_client_dir' : '/run/dhcp6c',
+  'ca_certificates' : '/usr/local/share/ca-certificates/vyos',
+}
+
+systemd_services = {
+    'haproxy' : 'haproxy.service',
+}
+
+internal_ports = {
+    'certbot_haproxy' : 65080, # Certbot running behing haproxy
 }
 
 config_status = '/tmp/vyos-config-status'

@@ -576,6 +576,10 @@ def verify(bgp):
                         raise ConfigError(
                             'Please unconfigure import vrf commands before using vpn commands in dependent VRFs!')
 
+                # Verify if the route-map exists
+                if dict_search('route_map.vrf.import', afi_config) is not None:
+                    verify_route_map(afi_config['route_map']['vrf']['import'], bgp)
+
                 if (dict_search('route_map.vrf.import', afi_config) is not None
                         or  dict_search('import.vrf', afi_config) is not None):
                     # FRR error: please unconfigure vpn to vrf commands before
@@ -589,7 +593,6 @@ def verify(bgp):
                             or dict_search('route_map.vpn.export', afi_config) is not None) :
                         raise ConfigError('Please unconfigure route-map VPN to VRF commands before '\
                                           'using "import vrf" commands!')
-
 
                 # Verify that the export/import route-maps do exist
                 for export_import in ['export', 'import']:

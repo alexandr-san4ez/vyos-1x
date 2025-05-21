@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
 from vyos.configverify import verify_interface_exists
@@ -86,6 +87,12 @@ def verify(ipoe):
             if dict_search('authentication.mode', ipoe) != 'radius':
                 raise ConfigError(
                     'Can configure username with Lua script only for RADIUS authentication'
+                )
+
+        if dict_search('external_dhcp.dhcp_relay', iface_config):
+            if not dict_search('external_dhcp.giaddr', iface_config):
+                Warning(
+                    f'"external-dhcp dhcp-relay" requires "giaddr" to be set for interface {interface}'
                 )
 
     verify_accel_ppp_authentication(ipoe, local_users=False)

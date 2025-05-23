@@ -138,7 +138,7 @@ class ConfigSession(object):
     The write API of VyOS.
     """
 
-    def __init__(self, session_id, app=APP):
+    def __init__(self, session_id, app=APP, shared=False):
         """
          Creates a new config session.
 
@@ -171,7 +171,11 @@ class ConfigSession(object):
 
         self.__run_command([CLI_SHELL_API, 'setupSession'])
 
+        self.shared = shared
+
     def __del__(self):
+        if self.shared:
+            return
         try:
             output = (
                 subprocess.check_output(

@@ -28,7 +28,6 @@ from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import interface_exists
 from vyos import ConfigError
 
@@ -168,12 +167,6 @@ def verify(nat):
             if not dict_search('translation.address', config) and not dict_search('translation.port', config):
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
                     raise ConfigError(f'{err_msg} translation requires address and/or port')
-
-            addr = dict_search('translation.address', config)
-            if addr != None and addr != 'masquerade' and not is_ip_network(addr):
-                for ip in addr.split('-'):
-                    if not is_addr_assigned(ip):
-                        Warning(f'IP address {ip} does not exist on the system!')
 
             # common rule verification
             verify_rule(config, err_msg, nat['firewall_group'])

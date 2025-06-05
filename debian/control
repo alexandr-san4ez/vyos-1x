@@ -7,7 +7,7 @@ Build-Depends:
   dh-python,
   fakeroot,
   gcc,
-  iproute2 (= 6.14.0-3~bpo12+1),
+  iproute2 (< 6.15),
   libvyosconfig0 (>= 0.0.7),
   libzmq3-dev,
   procps,

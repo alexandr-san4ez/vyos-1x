@@ -78,7 +78,7 @@ Depends:
   ipaddrcheck,
   iperf,
   iperf3,
-  iproute2 (>= 6.0.0),
+  iproute2 (<< 6.15),
   iptables,
   iputils-arping,
   isc-dhcp-client,

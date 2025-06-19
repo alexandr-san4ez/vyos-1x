@@ -95,6 +95,21 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         tmp = cmd(f'sudo podman exec -it {cont_name} sysctl kernel.msgmax')
         self.assertEqual(tmp, 'kernel.msgmax = 4096')
 
+    def test_name_server(self):
+        cont_name = 'dns-test'
+        name_server = '192.168.0.1'
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'name-server', name_server])
+
+        self.cli_commit()
+
+        n = cmd_to_json(f'sudo podman inspect {cont_name}')
+        self.assertEqual(n['HostConfig']['Dns'][0], name_server)
+
+        tmp = cmd(f'sudo podman exec -it {cont_name} cat /etc/resolv.conf')
+        self.assertIn(name_server, tmp)
+
     def test_cpu_limit(self):
         cont_name = 'c2'
 

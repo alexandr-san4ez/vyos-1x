@@ -99,7 +99,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         cont_name = 'dns-test'
         name_server = '192.168.0.1'
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
-        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'name-server', name_server])
 
         self.cli_commit()

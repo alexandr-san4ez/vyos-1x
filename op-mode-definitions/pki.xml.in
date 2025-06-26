@@ -576,20 +576,12 @@
   </node>
   <node name="renew">
     <children>
-      <node name="certbot">
+      <leafNode name="certbot">
         <properties>
-          <help>Manual certbot renewal</help>
+          <help>Start manual certbot renewal</help>
         </properties>
-        <command>${vyos_op_scripts_dir}/pki.py renew_certbot</command>
-        <children>
-          <leafNode name="force">
-            <properties>
-              <help>Force manual certbot renewal</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/pki.py renew_certbot --force</command>
-          </leafNode>
-        </children>
-      </node>
+        <command>sudo systemctl start certbot.service</command>
+      </leafNode>
     </children>
   </node>
 </interfaceDefinition>

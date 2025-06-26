@@ -977,22 +977,6 @@ def show_crl(name=None, pem=False):
     print("Certificate Revocation Lists:")
     print(tabulate.tabulate(data, headers))
 
-def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
-    from vyos.defaults import directories
-
-    certbot_config = directories['certbot']
-    hook_dir = directories['base']
-
-    tmp = f'/usr/bin/certbot renew --no-random-sleep-on-renew ' \
-          f'--config-dir "{certbot_config}" ' \
-          f'--post-hook "{hook_dir}/vyos-certbot-renew-pki.sh"'
-    if force:
-        tmp += ' --force-renewal'
-
-    out = cmd(tmp)
-    if not raw:
-        print(out)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--action', help='PKI action', required=True)

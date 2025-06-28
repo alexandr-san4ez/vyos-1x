@@ -77,7 +77,14 @@ vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions check test j2lint vyshim
+all: clean copyright interface_definitions op_mode_definitions check test j2lint vyshim
+
+.PHONY: copyright
+copyright:
+	@if git grep -q -E "Copyright( \(C\))? (19|20)[0-9]{2}(-[0-9]{4})? VyOS maintainers"; then \
+		echo "Error: Legacy copyright notice found."; \
+		exit 1; \
+	fi
 
 .PHONY: check
 .ONESHELL:

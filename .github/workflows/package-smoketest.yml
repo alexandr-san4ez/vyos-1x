@@ -1,6 +1,11 @@
 name: VyOS ISO integration Test
 
 on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches:
+      - circinus
   pull_request_target:
     branches:
       - circinus

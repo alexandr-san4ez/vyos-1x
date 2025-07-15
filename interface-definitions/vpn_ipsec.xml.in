@@ -1182,6 +1182,13 @@
                       #include <include/generic-disable-node.xml.i>
                       #include <include/ipsec/esp-group.xml.i>
                       #include <include/ipsec/local-traffic-selector.xml.i>
+                      <node name="local">
+                        <children>
+                          <leafNode name="prefix">
+                            <defaultValue>dynamic</defaultValue>
+                          </leafNode>
+                        </children>
+                      </node>
                       #include <include/ip-protocol.xml.i>
                       <leafNode name="priority">
                         <properties>
@@ -1218,6 +1225,7 @@
                               </constraint>
                               <multi/>
                             </properties>
+                            <defaultValue>dynamic</defaultValue>
                           </leafNode>
                         </children>
                       </node>

@@ -20,7 +20,6 @@
 "multicast.py",
 "nat.py",
 "neighbor.py",
-"nhrp.py",
 "openconnect.py",
 "openvpn.py",
 "otp.py",

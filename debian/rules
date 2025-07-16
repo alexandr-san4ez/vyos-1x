@@ -91,6 +91,8 @@ override_dh_auto_install:
 	# Install data files
 	mkdir -p $(DIR)/$(VYOS_DATA_DIR)
 	cp -r data/* $(DIR)/$(VYOS_DATA_DIR)
+	# Remove j2lint comments / linter configuration which would insert additional new-lines
+	find $(DIR)/$(VYOS_DATA_DIR) -name "*.j2" -type f | xargs sed -i -e '/^{#.*#}/d'
 
 	# Create localui dir
 	mkdir -p $(DIR)/$(VYOS_LOCALUI_DIR)

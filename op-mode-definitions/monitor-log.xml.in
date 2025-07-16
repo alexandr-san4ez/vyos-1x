@@ -243,6 +243,12 @@
                 </properties>
                 <command>journalctl --follow --no-hostname --boot /usr/lib/frr/isisd</command>
               </leafNode>
+              <leafNode name="openfabric">
+                <properties>
+                  <help>Monitor log for OpenFabric</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/fabricd</command>
+              </leafNode>
               <leafNode name="nhrp">
                 <properties>
                   <help>Monitor log for NHRP</help>
@@ -364,6 +370,12 @@
               <help>Monitor last lines of Virtual Router Redundancy Protocol log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit keepalived.service</command>
+          </leafNode>
+          <leafNode name="vyos-configd">
+            <properties>
+              <help>Monitor last lines of VyOS configuration daemon log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit vyos-configd.service</command>
           </leafNode>
           <leafNode name="vyos-domain-resolver">
             <properties>

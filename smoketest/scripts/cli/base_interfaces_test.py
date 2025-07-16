@@ -21,6 +21,7 @@ from netifaces import ifaddresses
 from systemd import journal
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.defaults import directories
@@ -186,6 +187,9 @@ class BasicInterfaceTest:
             for span in cls._mirror_interfaces:
                 section = Section.section(span)
                 cls.cli_set(cls, ['interfaces', section, span])
+
+            # Enable CSTORE guard time required by FRR related tests
+            cls._commit_guard_time = CSTORE_GUARD_TIME
 
         @classmethod
         def tearDownClass(cls):

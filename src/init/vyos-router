@@ -506,7 +506,6 @@ start ()
         touch $FRR_DEBUG
         touch /tmp/vyos.container.debug
         touch /tmp/vyos.ifconfig.debug
-        touch /tmp/vyos.frr.debug
         touch /tmp/vyos.container.debug
         touch /tmp/vyos.smoketest.debug
     fi

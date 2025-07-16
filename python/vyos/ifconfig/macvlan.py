@@ -41,5 +41,5 @@ class MACVLANIf(Interface):
         self.set_admin_state('down')
 
     def set_mode(self, mode):
-        cmd = f'ip link set dev {self.ifname} type macvlan mode {mode}'
+        cmd = f'ip link set dev {self.ifname} type {self.iftype} mode {mode}'
         return self._cmd(cmd)

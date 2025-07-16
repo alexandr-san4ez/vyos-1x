@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.convert import encode_to_base64
+from vyos.ifconfig import Interface
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -141,6 +142,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(base_path)
         self.cli_delete(tunnel_path)
+        self.cli_delete(vti_path)
         self.cli_commit()
 
         # Check for no longer running process
@@ -343,6 +345,12 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_secrets_lines:
             self.assertRegex(swanctl_conf, fr'{line}')
 
+        # Site-to-site interfaces should start out as 'down'
+        self.assertEqual(Interface(vti).get_admin_state(), 'down')
+
+        # Disable PKI
+        self.tearDownPKI()
+
 
     def test_site_to_site_vti_ts_afi(self):
         local_address = '192.0.2.10'
@@ -433,24 +441,40 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
 
     def test_dmvpn(self):
-        tunnel_if = 'tun100'
-        nhrp_secret = 'secret'
         ike_lifetime = '3600'
         esp_lifetime = '1800'
 
+        tunnel_if = "tun100"
+        tunnel_ip = '172.16.253.134/32'
+        tunnel_source = "192.0.2.134"
+        tunnel_encapsulation = "gre"
+        esp_group = "ESP-HUB"
+        ike_group = "IKE-HUB"
+        nhrp_secret = "vyos123"
+        nhrp_holdtime = '300'
+        nhs_tunnelip = '172.16.253.1'
+        nhs_nbmaip = '192.0.2.1'
+        map_tunnelip = '172.16.253.135'
+        map_nbmaip = "192.0.2.135"
+        nhrp_networkid = '1'
+
         # Tunnel
-        self.cli_set(tunnel_path + [tunnel_if, 'address', '172.16.253.134/29'])
-        self.cli_set(tunnel_path + [tunnel_if, 'encapsulation', 'gre'])
-        self.cli_set(tunnel_path + [tunnel_if, 'source-address', '192.0.2.1'])
-        self.cli_set(tunnel_path + [tunnel_if, 'enable-multicast'])
-        self.cli_set(tunnel_path + [tunnel_if, 'parameters', 'ip', 'key', '1'])
+        self.cli_set(tunnel_path + [tunnel_if, "address", tunnel_ip])
+        self.cli_set(tunnel_path + [tunnel_if, "encapsulation", tunnel_encapsulation])
+        self.cli_set(tunnel_path + [tunnel_if, "source-address", tunnel_source])
+        self.cli_set(tunnel_path + [tunnel_if, "enable-multicast"])
+        self.cli_set(tunnel_path + [tunnel_if, "parameters", "ip", "key", "1"])
 
         # NHRP
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'cisco-authentication', nhrp_secret])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'holding-time', '300'])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'multicast', 'dynamic'])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'redirect'])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'shortcut'])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "authentication", nhrp_secret])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "holdtime", nhrp_holdtime])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "multicast", nhs_tunnelip])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "redirect"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "shortcut"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "registration-no-unique"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "network-id", nhrp_networkid])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "nhs", "tunnel-ip", nhs_tunnelip, "nbma", nhs_nbmaip])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "map", "tunnel-ip", map_tunnelip, "nbma", map_nbmaip])
 
         # IKE/ESP Groups
         self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', esp_lifetime])
@@ -479,11 +503,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         swanctl_conf = read_file(swanctl_file)
         swanctl_lines = [
-            f'proposals = aes128-sha1-modp1024,aes256-sha1-prfsha1-modp1024',
+            f'proposals = aes256-sha1-prfsha1-modp1024',
             f'version = 1',
             f'rekey_time = {ike_lifetime}s',
             f'rekey_time = {esp_lifetime}s',
-            f'esp_proposals = aes128-sha1-modp1024,aes256-sha1-modp1024,3des-md5-modp1024',
+            f'esp_proposals = aes256-sha1-modp1024,3des-md5-modp1024',
             f'local_ts = dynamic[gre]',
             f'remote_ts = dynamic[gre]',
             f'mode = transport',
@@ -566,9 +590,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
-
-        # There is only one VTI test so no need to delete this globally in tearDown()
-        self.cli_delete(vti_path)
 
         # Disable PKI
         self.tearDownPKI()
@@ -1180,6 +1201,270 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
+
+        self.tearDownPKI()
+
+    def test_remote_access_pool_range(self):
+        # Same as test_remote_access but using an IP pool range instead of prefix
+        self.setupPKI()
+
+        ike_group = 'IKE-RW'
+        esp_group = 'ESP-RW'
+
+        conn_name = 'vyos-rw'
+        local_address = '192.0.2.1'
+        ip_pool_name = 'ra-rw-ipv4'
+        username = 'vyos'
+        password = 'secret'
+        ike_lifetime = '7200'
+        eap_lifetime = '3600'
+        local_id = 'ipsec.vyos.net'
+
+        name_servers = ['172.16.254.100', '172.16.254.101']
+        range_start = '172.16.250.2'
+        range_stop = '172.16.250.254'
+
+        # IKE
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', ike_lifetime])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'hash', 'sha512'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'hash', 'sha256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'dh-group', '2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'hash', 'sha256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'encryption', 'aes128gcm128'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'hash', 'sha256'])
+
+        # ESP
+        self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', eap_lifetime])
+        self.cli_set(base_path + ['esp-group', esp_group, 'pfs', 'disable'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'hash', 'sha512'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2',  'hash', 'sha384'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3',  'hash', 'sha256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '4',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '4',  'hash', 'sha1'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '10', 'encryption', 'aes128gcm128'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '10', 'hash', 'sha256'])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'local-id', local_id])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'local-users', 'username', username, 'password', password])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'server-mode', 'x509'])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'certificate', peer_name])
+        # verify() - CA cert required for x509 auth
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'ca-certificate', ca_name])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'esp-group', esp_group])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'ike-group', ike_group])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'local-address', local_address])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'pool', ip_pool_name])
+
+        for ns in name_servers:
+            self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'name-server', ns])
+        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'range', 'start', range_start])
+        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'range', 'stop', range_stop])
+
+        self.cli_commit()
+
+        # verify applied configuration
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_lines = [
+            f'{conn_name}',
+            f'remote_addrs = %any',
+            f'local_addrs = {local_address}',
+            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'version = 2',
+            f'send_certreq = no',
+            f'rekey_time = {ike_lifetime}s',
+            f'keyingtries = 0',
+            f'pools = {ip_pool_name}',
+            f'id = "{local_id}"',
+            f'auth = pubkey',
+            f'certs = peer1.pem',
+            f'auth = eap-mschapv2',
+            f'eap_id = %any',
+            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'life_time = {eap_lifetime}s',
+            f'dpd_action = clear',
+            f'replay_window = 32',
+            f'inactivity = 28800',
+            f'local_ts = 0.0.0.0/0,::/0',
+        ]
+        for line in swanctl_lines:
+            self.assertIn(line, swanctl_conf)
+
+        swanctl_secrets_lines = [
+            f'eap-{conn_name}-{username}',
+            f'secret = "{password}"',
+            f'id-{conn_name}-{username} = "{username}"',
+        ]
+        for line in swanctl_secrets_lines:
+            self.assertIn(line, swanctl_conf)
+
+        swanctl_pool_lines = [
+            f'{ip_pool_name}',
+            f'addrs = {range_start}-{range_stop}',
+            f'dns = {",".join(name_servers)}',
+        ]
+        for line in swanctl_pool_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # Check Root CA, Intermediate CA and Peer cert/key pair is present
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
+
+        self.tearDownPKI()
+
+    def test_remote_access_vti(self):
+        # Set up and use a VTI interface for the remote access VPN
+        self.setupPKI()
+
+        ike_group = 'IKE-RW'
+        esp_group = 'ESP-RW'
+
+        conn_name = 'vyos-rw'
+        local_address = '192.0.2.1'
+        vti = 'vti10'
+        ip_pool_name = 'ra-rw-ipv4'
+        username = 'vyos'
+        password = 'secret'
+        ike_lifetime = '7200'
+        eap_lifetime = '3600'
+        local_id = 'ipsec.vyos.net'
+
+        name_servers = ['10.1.1.1']
+        range_start = '10.1.1.10'
+        range_stop = '10.1.1.254'
+
+        # VTI interface
+        self.cli_set(vti_path + [vti, 'address', '10.1.1.1/24'])
+
+        # IKE
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', ike_lifetime])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'hash', 'sha512'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'hash', 'sha256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'dh-group', '2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'hash', 'sha256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'encryption', 'aes128gcm128'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'hash', 'sha256'])
+
+        # ESP
+        self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', eap_lifetime])
+        self.cli_set(base_path + ['esp-group', esp_group, 'pfs', 'disable'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'hash', 'sha512'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2',  'hash', 'sha384'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3',  'hash', 'sha256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '4',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '4',  'hash', 'sha1'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '10', 'encryption', 'aes128gcm128'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '10', 'hash', 'sha256'])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'local-id', local_id])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'local-users', 'username', username, 'password', password])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'server-mode', 'x509'])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'certificate', peer_name])
+        # verify() - CA cert required for x509 auth
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'ca-certificate', ca_name])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'esp-group', esp_group])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'ike-group', ike_group])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'bind', vti])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'local-address', local_address])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'pool', ip_pool_name])
+
+        for ns in name_servers:
+            self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'name-server', ns])
+        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'range', 'start', range_start])
+        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'range', 'stop', range_stop])
+
+        self.cli_commit()
+
+        # verify applied configuration
+        swanctl_conf = read_file(swanctl_file)
+
+        if_id = vti.lstrip('vti')
+        # The key defaults to 0 and will match any policies which similarly do
+        # not have a lookup key configuration - thus we shift the key by one
+        # to also support a vti0 interface
+        if_id = str(int(if_id) +1)
+
+        swanctl_lines = [
+            f'{conn_name}',
+            f'remote_addrs = %any',
+            f'local_addrs = {local_address}',
+            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'version = 2',
+            f'send_certreq = no',
+            f'rekey_time = {ike_lifetime}s',
+            f'keyingtries = 0',
+            f'pools = {ip_pool_name}',
+            f'id = "{local_id}"',
+            f'auth = pubkey',
+            f'certs = peer1.pem',
+            f'auth = eap-mschapv2',
+            f'eap_id = %any',
+            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'life_time = {eap_lifetime}s',
+            f'dpd_action = clear',
+            f'replay_window = 32',
+            f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
+            f'if_id_out = {if_id}',
+            f'inactivity = 28800',
+            f'local_ts = 0.0.0.0/0,::/0',
+        ]
+        for line in swanctl_lines:
+            self.assertIn(line, swanctl_conf)
+
+        swanctl_secrets_lines = [
+            f'eap-{conn_name}-{username}',
+            f'secret = "{password}"',
+            f'id-{conn_name}-{username} = "{username}"',
+        ]
+        for line in swanctl_secrets_lines:
+            self.assertIn(line, swanctl_conf)
+
+        swanctl_pool_lines = [
+            f'{ip_pool_name}',
+            f'addrs = {range_start}-{range_stop}',
+            f'dns = {",".join(name_servers)}',
+        ]
+        for line in swanctl_pool_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # Check Root CA, Intermediate CA and Peer cert/key pair is present
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
+
+        # Remote access interfaces should be set to 'up' during configure
+        self.assertEqual(Interface(vti).get_admin_state(), 'up')
+
+        # Delete the connection to verify the VTI interfaces is taken down
+        self.cli_delete(base_path + ['remote-access', 'connection', conn_name])
+        self.cli_commit()
+        self.assertEqual(Interface(vti).get_admin_state(), 'down')
 
         self.tearDownPKI()
 

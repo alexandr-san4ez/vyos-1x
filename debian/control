@@ -163,14 +163,11 @@ Depends:
   sstp-client,
 # End "interfaces sstpc"
 # For "protocols *"
-  frr (>= 9.1),
+  frr (>= 10.2),
   frr-pythontools,
   frr-rpki-rtrlib,
   frr-snmp,
 # End "protocols *"
-# For "protocols nhrp" (part of DMVPN)
-  opennhrp,
-# End "protocols nhrp"
 # For "protocols igmp-proxy"
   igmpproxy,
 # End "protocols igmp-proxy"

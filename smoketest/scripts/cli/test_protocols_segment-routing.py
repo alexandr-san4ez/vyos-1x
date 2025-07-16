@@ -17,14 +17,15 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.frrender import zebra_daemon
 from vyos.utils.process import process_named_running
 from vyos.utils.system import sysctl_read
 
 base_path = ['protocols', 'segment-routing']
-PROCESS_NAME = 'zebra'
 
 class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -32,17 +33,19 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsSegmentRouting, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(zebra_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(zebra_daemon))
 
     def test_srv6(self):
         interfaces = Section.interfaces('ethernet', vlan=False)
@@ -68,7 +71,7 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(sysctl_read(f'net.ipv6.conf.{interface}.seg6_enabled'), '1')
             self.assertEqual(sysctl_read(f'net.ipv6.conf.{interface}.seg6_require_hmac'), '0') # default
 
-        frrconfig = self.getFRRconfig(f'segment-routing', daemon='zebra')
+        frrconfig = self.getFRRconfig(f'segment-routing', endsection='^exit')
         self.assertIn(f'segment-routing', frrconfig)
         self.assertIn(f' srv6', frrconfig)
         self.assertIn(f'  locators', frrconfig)

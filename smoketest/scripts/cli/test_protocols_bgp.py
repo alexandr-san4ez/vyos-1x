@@ -19,14 +19,15 @@ import unittest
 from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.ifconfig import Section
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
+from vyos.frrender import bgp_daemon
 
-PROCESS_NAME = 'bgpd'
 ASN = '64512'
 base_path = ['protocols', 'bgp']
 
@@ -178,7 +179,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         super(TestProtocolsBGP, cls).setUpClass()
 
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(bgp_daemon)
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -200,6 +201,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
         cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
 
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
+
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['policy', 'route-map'])
@@ -217,8 +221,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+        frrconfig = self.getFRRconfig('router bgp', endsection='^exit')
+        self.assertNotIn(f'router bgp', frrconfig)
+
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(bgp_daemon))
 
     def create_bgp_instances_for_import_test(self):
         table = '1000'
@@ -370,7 +377,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp allow-martian-nexthop', frrconfig)
@@ -397,15 +404,21 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
         self.assertIn(f' no bgp suppress-duplicates', frrconfig)
 
-        afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
+        afiv4_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv4 unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
         self.assertIn(f'  maximum-paths ibgp {max_path_v4ibgp}', afiv4_config)
 
-        afiv4_config = self.getFRRconfig(' address-family ipv4 labeled-unicast')
+        afiv4_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv4 labeled-unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
         self.assertIn(f'  maximum-paths ibgp {max_path_v4ibgp}', afiv4_config)
 
-        afiv6_config = self.getFRRconfig(' address-family ipv6 unicast')
+        afiv6_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv6 unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f'  maximum-paths {max_path_v6}', afiv6_config)
         self.assertIn(f'  maximum-paths ibgp {max_path_v6ibgp}', afiv6_config)
 
@@ -512,7 +525,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
 
         for peer, peer_config in neighbor_config.items():
@@ -617,7 +630,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
 
         for peer, peer_config in peer_group_config.items():
@@ -660,6 +673,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             'kernel' : {
                 'metric' : '400',
                 'route_map' : 'redistr-ipv4-kernel',
+            },
+            'nhrp': {
+                'metric': '400',
+                'route_map': 'redistr-ipv4-nhrp',
             },
             'ospf' : {
                 'metric' : '500',
@@ -723,7 +740,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(' address-family ipv4 unicast', frrconfig)
 
@@ -835,7 +852,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(' address-family ipv6 unicast', frrconfig)
         # T2100: By default ebgp-requires-policy is disabled to keep VyOS
@@ -889,7 +906,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
         self.assertIn(f' neighbor {peer_group} remote-as {ASN}', frrconfig)
@@ -924,7 +941,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' address-family l2vpn evpn', frrconfig)
         self.assertIn(f'  advertise-all-vni', frrconfig)
@@ -937,7 +954,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  flooding disable', frrconfig)
         self.assertIn(f'  mac-vrf soo {soo}', frrconfig)
         for vni in vnis:
-            vniconfig = self.getFRRconfig(f'  vni {vni}')
+            vniconfig = self.getFRRconfig(f'  vni {vni}', endsection='^  exit-vni')
             self.assertIn(f'vni {vni}', vniconfig)
             self.assertIn(f'   advertise-default-gw', vniconfig)
             self.assertIn(f'   advertise-svi-ip', vniconfig)
@@ -980,7 +997,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR distances configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         for family in verify_families:
             self.assertIn(f'address-family {family}', frrconfig)
@@ -1018,7 +1035,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' address-family ipv6 unicast', frrconfig)
 
@@ -1026,7 +1043,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'  import vrf {vrf}', frrconfig)
 
             # Verify FRR bgpd configuration
-            frr_vrf_config = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
+            frr_vrf_config = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}', endsection='^exit')
             self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
             self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
 
@@ -1044,7 +1061,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp confederation identifier {confed_id}', frrconfig)
@@ -1061,7 +1078,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {interface} interface v6only remote-as {remote_asn}', frrconfig)
         self.assertIn(f' address-family ipv6 unicast', frrconfig)
@@ -1093,11 +1110,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
 
         for afi in ['ipv4', 'ipv6']:
-            afi_config = self.getFRRconfig(f' address-family {afi} unicast', endsection='exit-address-family', daemon='bgpd')
+            afi_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                           substring=f' address-family {afi} unicast',
+                                           endsubsection='^ exit-address-family')
             self.assertIn(f'address-family {afi} unicast', afi_config)
             self.assertIn(f'  export vpn', afi_config)
             self.assertIn(f'  import vpn', afi_config)
@@ -1142,7 +1161,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {neighbor} peer-group {peer_group}', frrconfig)
         self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
@@ -1167,7 +1186,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {neighbor} remote-as {remote_asn}', frrconfig)
         self.assertIn(f' neighbor {neighbor} local-as {local_asn}', frrconfig)
@@ -1192,8 +1211,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             base_path + ['address-family', import_afi, 'import', 'vrf',
                          import_vrf])
         self.cli_commit()
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
-        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}', endsection='^exit')
 
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f'address-family ipv4 unicast', frrconfig)
@@ -1215,8 +1234,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             base_path + ['address-family', import_afi, 'import', 'vrf',
                          import_vrf])
         self.cli_commit()
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
-        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f'address-family ipv4 unicast', frrconfig)
         self.assertIn(f'  import vrf {import_vrf}', frrconfig)
@@ -1229,8 +1248,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # Verify deleting existent vrf default if other vrfs were created
         self.create_bgp_instances_for_import_test()
         self.cli_commit()
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
-        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f'router bgp {ASN} vrf {import_vrf}', frrconfig_vrf)
         self.cli_delete(base_path)
@@ -1246,8 +1265,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                                                           'vpn', 'export',
                                                           import_rd])
         self.cli_commit()
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
-        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f'router bgp {ASN} vrf {import_vrf}', frrconfig_vrf)
         self.assertIn(f'address-family ipv4 unicast', frrconfig_vrf)
@@ -1276,7 +1295,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for interface in interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}')
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' mpls bgp forwarding', frrconfig)
 
@@ -1290,7 +1309,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for interface in interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}')
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' mpls bgp forwarding', frrconfig)
             self.cli_delete(['interfaces', 'ethernet', interface, 'vrf'])
@@ -1310,7 +1329,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['address-family', 'ipv4-unicast', 'sid'])
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' segment-routing srv6', frrconfig)
         self.assertIn(f'  locator {locator_name}', frrconfig)
@@ -1325,17 +1344,22 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' segment-routing srv6', frrconfig)
         self.assertIn(f'  locator {locator_name}', frrconfig)
 
-        afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
+        afiv4_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv4 unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f' sid vpn export {sid}', afiv4_config)
         self.assertIn(f' nexthop vpn export {nexthop_ipv4}', afiv4_config)
-        afiv6_config = self.getFRRconfig(' address-family ipv6 unicast')
+
+        afiv6_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv6 unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f' sid vpn export {sid}', afiv6_config)
-        self.assertIn(f' nexthop vpn export {nexthop_ipv6}', afiv4_config)
+        self.assertIn(f' nexthop vpn export {nexthop_ipv6}', afiv6_config)
 
     def test_bgp_25_ipv4_labeled_unicast_peer_group(self):
         pg_ipv4 = 'foo4'
@@ -1349,14 +1373,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {pg_ipv4} peer-group', frrconfig)
         self.assertIn(f' neighbor {pg_ipv4} remote-as external', frrconfig)
         self.assertIn(f' bgp listen range {ipv4_prefix} peer-group {pg_ipv4}', frrconfig)
         self.assertIn(f' bgp labeled-unicast ipv4-explicit-null', frrconfig)
 
-        afiv4_config = self.getFRRconfig(' address-family ipv4 labeled-unicast')
+        afiv4_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv4 labeled-unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f'  neighbor {pg_ipv4} activate', afiv4_config)
         self.assertIn(f'  neighbor {pg_ipv4} maximum-prefix {ipv4_max_prefix}', afiv4_config)
 
@@ -1373,14 +1399,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {pg_ipv6} peer-group', frrconfig)
         self.assertIn(f' neighbor {pg_ipv6} remote-as external', frrconfig)
         self.assertIn(f' bgp listen range {ipv6_prefix} peer-group {pg_ipv6}', frrconfig)
         self.assertIn(f' bgp labeled-unicast ipv6-explicit-null', frrconfig)
 
-        afiv6_config = self.getFRRconfig(' address-family ipv6 labeled-unicast')
+        afiv6_config = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                         substring=' address-family ipv6 labeled-unicast',
+                                         endsubsection='^ exit-address-family')
         self.assertIn(f'  neighbor {pg_ipv6} activate', afiv6_config)
         self.assertIn(f'  neighbor {pg_ipv6} maximum-prefix {ipv6_max_prefix}', afiv6_config)
 
@@ -1392,7 +1420,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['peer-group', 'peer1', 'remote-as', 'internal'])
         self.cli_commit()
 
-        conf = self.getFRRconfig(' address-family l2vpn evpn')
+        conf = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
+                                 substring=' address-family l2vpn evpn', endsubsection='^ exit-address-family')
 
         self.assertIn('neighbor peer1 route-reflector-client', conf)
 
@@ -1431,7 +1460,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['neighbor', int_neighbors[1], 'remote-as', ASN])
         self.cli_commit()
 
-        conf = self.getFRRconfig(f'router bgp {ASN}')
+        conf = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         _common_config_check(conf)
 
         # test add internal remote-as to external group
@@ -1446,7 +1475,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['neighbor', ext_neighbors[1], 'remote-as', f'{int(ASN) + 2}'])
         self.cli_commit()
 
-        conf = self.getFRRconfig(f'router bgp {ASN}')
+        conf = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         _common_config_check(conf)
         self.assertIn(f'neighbor {ext_neighbors[1]} remote-as {int(ASN) + 2}', conf)
         self.assertIn(f'neighbor {ext_neighbors[1]} peer-group {ext_pg_name}', conf)
@@ -1458,7 +1487,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['neighbor', ext_neighbors[1], 'remote-as', 'external'])
         self.cli_commit()
 
-        conf = self.getFRRconfig(f'router bgp {ASN}')
+        conf = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         _common_config_check(conf, include_ras=False)
 
         self.assertIn(f'neighbor {int_neighbors[0]} remote-as internal', conf)
@@ -1483,7 +1512,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        conf = self.getFRRconfig(f'router bgp {ASN}')
+        conf = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
 
         self.assertIn(f'neighbor OVERLAY remote-as {int(ASN) + 1}', conf)
         self.assertIn(f'neighbor OVERLAY local-as {int(ASN) + 1}', conf)
@@ -1552,7 +1581,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # let the bgpd process recover
         sleep(10)
         # update daemon PID - this was a planned daemon restart
-        self.daemon_pid = process_named_running(PROCESS_NAME)
+        self.daemon_pid = process_named_running(bgp_daemon)
 
         # set bmp config but not set address
         self.cli_set(target_path + ['port', target_port])
@@ -1572,7 +1601,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify bgpd bmp configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit')
         self.assertIn(f'bmp mirror buffer-limit {mirror_buffer}', frrconfig)
         self.assertIn(f'bmp targets {target_name}', frrconfig)
         self.assertIn(f'bmp mirror', frrconfig)

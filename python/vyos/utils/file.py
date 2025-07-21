@@ -124,12 +124,6 @@ def chmod_2775(path):
     bitmask = S_ISGID | S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
     chmod(path, bitmask)
 
-def makedir(path, user=None, group=None):
-    if os.path.exists(path):
-        return
-    os.makedirs(path, mode=0o755)
-    chown(path, user, group)
-
 def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sleep_interval=0.1):
     """ Waits for an inotify event to occur """
     if not os.path.dirname(file_path):

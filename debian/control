@@ -24,6 +24,8 @@ Build-Depends:
   python3-netaddr,
   python3-passlib,
   python3-pyudev,
+  python3-pyroute2,
+  python3-voluptuous,
   python3-coverage,
   python3-lxml,
   python3-netifaces,

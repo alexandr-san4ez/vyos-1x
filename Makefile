@@ -110,7 +110,8 @@ test:
 
 .PHONE: pylint
 pylint:
-	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py)
+	@echo Running "pylint --errors-only ..."
+	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*)
 
 .PHONY: j2lint
 j2lint:

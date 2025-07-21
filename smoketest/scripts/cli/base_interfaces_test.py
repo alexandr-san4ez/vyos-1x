@@ -12,9 +12,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from netifaces import AF_INET
-from netifaces import AF_INET6
-from netifaces import ifaddresses
+from socket import AF_INET
+from socket import AF_INET6
+from netifaces import ifaddresses # pylint: disable = no-name-in-module
 from systemd import journal
 
 from base_vyostest_shim import VyOSUnitTestSHIM

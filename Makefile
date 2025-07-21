@@ -87,7 +87,7 @@ vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean copyright libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+all: clean copyright pylint libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
 
 .PHONY: copyright
 copyright:
@@ -108,6 +108,11 @@ test: generate-configd-include-json
 	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
+.PHONE: pylint
+pylint: interface_definitions
+	@echo Running "pylint --errors-only ..."
+	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*)
+
 .PHONY: j2lint
 j2lint:
 ifndef J2LINT
@@ -121,7 +126,7 @@ sonar:
 
 .PHONY: unused-imports
 unused-imports:
-	@pylint --disable=all --enable=W0611 $(PYLINT_FILES)
+	@pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b

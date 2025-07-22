@@ -109,7 +109,7 @@ test:
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
 .PHONE: pylint
-pylint:
+pylint: interface_definitions
 	@echo Running "pylint --errors-only ..."
 	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*)
 

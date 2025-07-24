@@ -106,6 +106,21 @@
               </leafNode>
             </children>
           </tagNode>
+<<<<<<< HEAD
+=======
+          <leafNode name="enable-egress">
+            <properties>
+              <help>Enable egress sampling</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="vpp">
+            <properties>
+              <help>Enable VPP sampling</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+>>>>>>> e0564b363 (T7175: Added VPP option)
           #include <include/interface/vrf.xml.i>
         </children>
       </node>

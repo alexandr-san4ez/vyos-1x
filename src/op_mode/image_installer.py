@@ -516,21 +516,18 @@ def validate_signature(file_path: str, sign_type: str) -> None:
         print('Signature is valid')
 
 def download_file(local_file: str, remote_path: str, vrf: str,
-                  username: str, password: str,
                   progressbar: bool = False, check_space: bool = False):
-    environ['REMOTE_USERNAME'] = username
-    environ['REMOTE_PASSWORD'] = password
+    # Server credentials are implicitly passed in environment variables
+    # that are set by add_image
     if vrf is None:
         download(local_file, remote_path, progressbar=progressbar,
                  check_space=check_space, raise_error=True)
     else:
-        vrf_cmd = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password} \
-                ip vrf exec {vrf} {external_download_script} \
-                --local-file {local_file} --remote-path {remote_path}'
-        cmd(vrf_cmd)
+        vrf_cmd = f'ip vrf exec {vrf} {external_download_script} \
+                    --local-file {local_file} --remote-path {remote_path}'
+        cmd(vrf_cmd, env=environ)
 
 def image_fetch(image_path: str, vrf: str = None,
-                username: str = '', password: str = '',
                 no_prompt: bool = False) -> Path:
     """Fetch an ISO image
 
@@ -551,7 +548,6 @@ def image_fetch(image_path: str, vrf: str = None,
             # Download the image file
             ISO_DOWNLOAD_PATH = os.path.join(os.path.expanduser("~"), '{0}.iso'.format(uuid4()))
             download_file(ISO_DOWNLOAD_PATH, image_path, vrf,
-                          username, password,
                           progressbar=True, check_space=True)
 
             # Download the image signature
@@ -562,8 +558,7 @@ def image_fetch(image_path: str, vrf: str = None,
             for sign_type in ['minisig']:
                 try:
                     download_file(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
-                                  f'{image_path}.{sign_type}', vrf,
-                                  username, password)
+                                  f'{image_path}.{sign_type}', vrf)
                     sign_file = (True, sign_type)
                     break
                 except Exception:
@@ -913,8 +908,11 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     if disk_usage('/').free < (2 * 1024**3):
         exit(MSG_ERR_NOT_ENOUGH_SPACE)
 
+    environ['REMOTE_USERNAME'] = username
+    environ['REMOTE_PASSWORD'] = password
+
     # fetch an image
-    iso_path: Path = image_fetch(image_path, vrf, username, password, no_prompt)
+    iso_path: Path = image_fetch(image_path, vrf, no_prompt)
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)

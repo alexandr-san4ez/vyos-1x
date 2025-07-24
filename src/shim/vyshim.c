@@ -178,6 +178,27 @@ int initialization(void* Requester)
     strsep(&pid_val, "_");
     debug_print("config session pid: %s\n", pid_val);
 
+    char *sudo_user = getenv("SUDO_USER");
+    if (!sudo_user) {
+        char nobody[] = "nobody";
+        sudo_user = nobody;
+    }
+    debug_print("sudo_user is %s\n", sudo_user);
+
+    char *temp_config_dir = getenv("VYATTA_TEMP_CONFIG_DIR");
+    if (!temp_config_dir) {
+        char none[] = "";
+        temp_config_dir = none;
+    }
+    debug_print("temp_config_dir is %s\n", temp_config_dir);
+
+    char *changes_only_dir = getenv("VYATTA_CHANGES_ONLY_DIR");
+    if (!changes_only_dir) {
+        char none[] = "";
+        changes_only_dir = none;
+    }
+    debug_print("changes_only_dir is %s\n", changes_only_dir);
+
     debug_print("Sending init announcement\n");
     char *init_announce = mkjson(MKJSON_OBJ, 1,
                                  MKJSON_STRING, "type", "init");
@@ -240,6 +261,20 @@ int initialization(void* Requester)
     zmq_recv(Requester, buffer, 16, 0);
     debug_print("Received pid receipt\n");
 
+    debug_print("Sending config session sudo_user\n");
+    zmq_send(Requester, sudo_user, strlen(sudo_user), 0);
+    zmq_recv(Requester, buffer, 16, 0);
+    debug_print("Received sudo_user receipt\n");
+
+    debug_print("Sending config session temp_config_dir\n");
+    zmq_send(Requester, temp_config_dir, strlen(temp_config_dir), 0);
+    zmq_recv(Requester, buffer, 16, 0);
+    debug_print("Received temp_config_dir receipt\n");
+
+    debug_print("Sending config session changes_only_dir\n");
+    zmq_send(Requester, changes_only_dir, strlen(changes_only_dir), 0);
+    zmq_recv(Requester, buffer, 16, 0);
+    debug_print("Received changes_only_dir receipt\n");
 
     return 0;
 }

@@ -80,6 +80,7 @@ class Interface(Control):
         'bridgeable':  False,
         'eternal': '',
     }
+    iftype = None
 
     _command_get = {
         'admin_state': {

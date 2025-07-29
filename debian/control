@@ -36,7 +36,9 @@ Build-Depends:
   python3-requests,
   python3-setuptools,
   python3-xmltodict,
+  python3-multipart,
   quilt,
+  uvicorn,
   whois
 Standards-Version: 3.9.6
 
@@ -201,6 +203,7 @@ Depends:
   uidmap,
   usb-modeswitch,
   usbutils,
+  uvicorn,
   vyatta-bash,
   vyatta-cfg,
   vyos-http-api-tools,

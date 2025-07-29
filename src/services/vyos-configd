@@ -116,13 +116,13 @@ def stdout_redirected(filename, mode):
     destination_file = None
     try:
         sys.stdout.flush()
-        saved_stdout_fd = os.dup(sys.stdout.fileno())
+        saved_stdout_fd = os.dup(sys.stdout.fileno()) # pylint: disable = no-member
         destination_file = open(filename, mode)
-        os.dup2(destination_file.fileno(), sys.stdout.fileno())
+        os.dup2(destination_file.fileno(), sys.stdout.fileno()) # pylint: disable = no-member
         yield
     finally:
         if saved_stdout_fd is not None:
-            os.dup2(saved_stdout_fd, sys.stdout.fileno())
+            os.dup2(saved_stdout_fd, sys.stdout.fileno()) # pylint: disable = no-member
             os.close(saved_stdout_fd)
         if destination_file is not None:
             destination_file.close()

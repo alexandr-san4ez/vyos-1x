@@ -16,6 +16,7 @@
 
 # Migrate rsa keys into PKI configuration
 
+import sys
 import base64
 import os
 import struct

@@ -23,13 +23,11 @@ from glob import glob
 
 from ipaddress import IPv4Network
 from ipaddress import IPv6Interface
-from netifaces import ifaddresses
-# this is not the same as socket.AF_INET/INET6
-from netifaces import AF_INET
-from netifaces import AF_INET6
+from netifaces import ifaddresses # pylint: disable = no-name-in-module
+from socket import AF_INET
+from socket import AF_INET6
 from netaddr import EUI
 from netaddr import mac_unix_expanded
-
 from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids

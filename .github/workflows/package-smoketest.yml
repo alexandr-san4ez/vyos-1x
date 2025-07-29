@@ -1,6 +1,11 @@
 name: VyOS ISO integration Test
 
 on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches:
+      - circinus
   pull_request_target:
     branches:
       - circinus
@@ -47,7 +52,11 @@ jobs:
           submodules: true
       - name: Build vyos-1x package
         run: |
-          cd packages/vyos-1x; dpkg-buildpackage -uc -us -tc -b
+          cd packages/vyos-1x
+          # Install maybe missing dependencies due to new ones added in a PR
+          sudo apt-get update
+          sudo apt-get build-dep -y .
+          dpkg-buildpackage -uc -us -tc -b
       - name: Generate ISO version string
         id: version
         run: |

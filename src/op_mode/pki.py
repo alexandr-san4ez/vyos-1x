@@ -607,7 +607,7 @@ def generate_certificate_revocation_list(ca_name, install=False, file=False):
         install_crl(ca_name, crl)
 
     if file:
-        write_file(f'{name}.crl', encode_certificate(crl))
+        write_file(f'{ca_name}.crl', encode_certificate(crl))
 
 def generate_ssh_keypair(name, install=False, file=False):
     private_key, key_type = generate_private_key()

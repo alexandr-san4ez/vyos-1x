@@ -40,7 +40,7 @@ from multipart.multipart import parse_options_header
 from uvicorn import Config as UvicornConfig
 from uvicorn import Server as UvicornServer
 
-from ariadne.asgi import GraphQL
+from ariadne.asgi import GraphQL # pylint: disable = import-error
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree
@@ -102,7 +102,7 @@ class BasePathModel(BaseModel):
     path: List[StrictStr]
 
     @validator("path")
-    def check_non_empty(cls, path):
+    def check_non_empty(cls, path): # pylint: disable = no-self-argument
         if not len(path) > 0:
             raise ValueError('path must be non-empty')
         return path

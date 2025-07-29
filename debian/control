@@ -37,6 +37,7 @@ Build-Depends:
   python3-setuptools,
   python3-xmltodict,
   python3-multipart,
+  python3-pydantic,
   quilt,
   uvicorn,
   whois
@@ -159,6 +160,7 @@ Depends:
   python3-netifaces,
   python3-paramiko,
   python3-passlib,
+  python3-pydantic,
   python3-pyroute2,
   python3-psutil,
   python3-pyhumps,

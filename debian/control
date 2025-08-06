@@ -219,6 +219,16 @@ Depends:
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
+Package: vyos-1x-aws
+Architecture: all
+Depends:
+ vyos-1x,
+# For "service aws glb"
+ aws-gwlbtun,
+Description: VyOS configuration scripts and data for AWS Gateway Load Balancer
+ Adds configuration files required for AWS Gateway Load Balancer service
+ running on top of VyOS.
+
 Package: vyos-1x-vmware
 Architecture: amd64
 Depends:

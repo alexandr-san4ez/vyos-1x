@@ -393,20 +393,6 @@ def verify_vpp_interfaces_dpdk_num_queues(qtype: str, num_queues: int, workers: 
         )
 
 
-def verify_vpp_host_resources(config: dict):
-    max_map_count = int(config['settings']['host_resources']['max_map_count'])
-
-    # Get HugePages total count
-    hugepages = mem_checks.get_total_hugepages_count()
-
-    if max_map_count < 2 * hugepages:
-        Warning(
-            'The max-map-count should be greater than or equal to (2 * HugePages_Total) '
-            'or VPP could work not properly. Please set up '
-            f'"vpp settings host-resources max-map-count" to {2 * hugepages} or higher'
-        )
-
-
 def verify_routes_count(settings: dict, workers: int):
     """
     Maximum routes count depending on main heap size,

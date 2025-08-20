@@ -21,6 +21,7 @@ import sys
 import glob
 import json
 import typing
+import textwrap
 from datetime import datetime
 from tabulate import tabulate
 
@@ -329,11 +330,14 @@ def _get_kernel_data(raw, ifname = None, detail = False,
 
 def _format_kernel_data(data, detail, statistics):
     output_list = []
+    podman_vrf = {}
     tmpInfo = {}
 
     # Sort interfaces by name
     for interface in sorted(data, key=lambda x: x.get('ifname', '')):
         if interface.get('linkinfo', {}).get('info_kind') == 'vrf':
+            continue
+        elif interface.get('ifname').startswith(('tunl', 'gre', 'erspan', 'pim6reg')):
             continue
 
         # Get the device model; ex. Intel Corporation Ethernet Controller I225-V
@@ -346,6 +350,7 @@ def _format_kernel_data(data, detail, statistics):
         # Get the IP addresses on interface
         ip_list = []
         has_global = False
+        vrf = 'default'
 
         for ip in interface['addr_info']:
             if ip.get('scope') in ('global', 'host'):
@@ -354,8 +359,12 @@ def _format_kernel_data(data, detail, statistics):
                 prefixlen = ip.get('prefixlen', '')
                 ip_list.append(f"{local}/{prefixlen}")
 
+        if interface.get('ifname').startswith('pod-'):
+            podman_vrf[interface.get('ifname')] = {}
+            podman_vrf[interface.get('ifname')]['vrf'] = interface.get('master', 'default')
+
         if interface.get('master', '').startswith('pod-'):
-            vrf = podman_vrf.get(interface.get('master', '')).get('vrf', 'default')
+            vrf = podman_vrf.get(interface.get('master', {})).get('vrf', 'default')
         elif interface.get('linkinfo', {}).get('info_slave_kind', '') == 'vrf':
             vrf = interface.get('master', 'default')
 
@@ -371,11 +380,11 @@ def _format_kernel_data(data, detail, statistics):
         # Generate temporary dict to hold data
         tmpInfo['ifname'] = interface.get('ifname', '')
         tmpInfo['ip'] = ip_list
-        tmpInfo['mac'] = interface.get('address', 'n/a') if is_interface_has_mac(interface.get('ifname', '')) else 'n/a'
+        tmpInfo['mac'] = "n/a" if interface.get('ifname', '').startswith(("tun", "wg", "gre")) else interface.get('address', 'n/a')
         tmpInfo['mtu'] = interface.get('mtu', '')
-        tmpInfo['vrf'] = interface.get('master', 'default')
+        tmpInfo['vrf'] = vrf
         tmpInfo['status'] = sl_status
-        tmpInfo['description'] = interface.get('ifalias', '')
+        tmpInfo['description'] = "\n".join(textwrap.wrap(interface.get('ifalias', ''), width=50))
         tmpInfo['device'] = dev_model
         tmpInfo['alternate_names'] = interface.get('altnames', '')
         tmpInfo['minimum_mtu'] = interface.get('min_mtu', '')

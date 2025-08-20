@@ -354,6 +354,10 @@ def _format_kernel_data(data, detail, statistics):
                 prefixlen = ip.get('prefixlen', '')
                 ip_list.append(f"{local}/{prefixlen}")
 
+        if interface.get('master', '').startswith('pod-'):
+            vrf = podman_vrf.get(interface.get('master', '')).get('vrf', 'default')
+        elif interface.get('linkinfo', {}).get('info_slave_kind', '') == 'vrf':
+            vrf = interface.get('master', 'default')
 
         # If no global IP address, add '-'; indicates no IP address on interface
         if not has_global:

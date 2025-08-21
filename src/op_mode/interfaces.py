@@ -85,6 +85,10 @@ def filtered_interfaces(ifnames: typing.Union[str, list],
 
         yield interface
 
+def is_interface_has_mac(interface_name):
+    interface_no_mac = ('tun', 'wg')
+    return not any(interface_name.startswith(prefix) for prefix in interface_no_mac)
+
 def detailed_output(dataset, headers):
     for data in dataset:
         adjusted_rule = data + [""] * (len(headers) - len(data)) # account for different header length, like default-action
@@ -246,10 +250,6 @@ def _get_summary_data(ifname: typing.Optional[str],
         iftype = ''
     ret = []
 
-    def is_interface_has_mac(interface_name):
-        interface_no_mac = ('tun', 'wg')
-        return not any(interface_name.startswith(prefix) for prefix in interface_no_mac)
-
     for interface in filtered_interfaces(ifname, iftype, vif, vrrp):
         res_intf = {}
 
@@ -367,7 +367,7 @@ def _format_kernel_data(data, detail, statistics):
         # Generate temporary dict to hold data
         tmpInfo['ifname'] = interface.get('ifname', '')
         tmpInfo['ip'] = ip_list
-        tmpInfo['mac'] = interface.get('address', '')
+        tmpInfo['mac'] = interface.get('address', 'n/a') if is_interface_has_mac(interface.get('ifname', '')) else 'n/a'
         tmpInfo['mtu'] = interface.get('mtu', '')
         tmpInfo['vrf'] = interface.get('master', 'default')
         tmpInfo['status'] = sl_status

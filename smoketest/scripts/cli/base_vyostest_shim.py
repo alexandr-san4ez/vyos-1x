@@ -76,6 +76,11 @@ class VyOSUnitTestSHIM:
                 print('del ' + ' '.join(config))
             self._session.delete(config)
 
+        def cli_discard(self):
+            if self.debug:
+                print('DISCARD')
+            self._session.discard()
+
         def cli_commit(self):
             if self.debug:
                 print('commit')

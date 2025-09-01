@@ -160,7 +160,6 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             'Last communication',
             'Lease expiration',
             'Remaining',
-            'Type',
             'Pool',
             'Hostname',
             'Type',

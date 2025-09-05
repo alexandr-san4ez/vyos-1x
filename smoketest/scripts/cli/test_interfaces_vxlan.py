@@ -25,7 +25,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.network import get_vxlan_vlan_tunnels
 from vyos.utils.network import get_vxlan_vni_filter
 from vyos.template import is_ipv6
-from vyos import ConfigError
 from base_interfaces_test import BasicInterfaceTest
 
 def convert_to_list(ranges_to_convert):

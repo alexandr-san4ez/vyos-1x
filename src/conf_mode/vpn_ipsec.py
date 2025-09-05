@@ -22,7 +22,6 @@ import jmespath
 from sys import exit
 from time import sleep
 
-from vyos.base import Warning
 from vyos.config import Config
 from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents

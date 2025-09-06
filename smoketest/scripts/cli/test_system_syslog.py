@@ -110,6 +110,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             },
             'syslog.vyos.net': {
                 'facility': {'all' : {'level': 'debug'}},
+                'format': ['include-timezone'],
                 'port': '1515',
                 'protocol': 'tcp',
             },
@@ -179,6 +180,15 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             if 'port' in remote_options:
                 port = remote_options['port']
             self.assertIn(f'port="{port}"', config)
+
+            if 'format' in remote_options:
+                if 'include-timezone' in remote_options['format']:
+                    self.assertIn(f'template="RSYSLOG_SyslogProtocol23Format"', config)
+
+                if 'octet-counted' in remote_options['format']:
+                    self.assertIn(f'TCP_Framing="octed-counted"', config)
+                else:
+                    self.assertIn(f'TCP_Framing="traditional"', config)
 
             protocol = default_protocol
             if 'protocol' in remote_options:

@@ -1,4 +1,0 @@
-[submodule "libvyosconfig"]
-	path = libvyosconfig
-	url = ../../vyos-networks/libvyosconfig
-	branch = circinus

@@ -9,12 +9,15 @@
               <help>Border Gateway Protocol (BGP) information</help>
             </properties>
             <children>
-              <leafNode name="all">
+              <node name="all">
                 <properties>
                   <help>Clear all BGP peering sessions</help>
                 </properties>
-                <command>vtysh -c "clear bgp ipv4 *"</command>
-              </leafNode>
+                <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </node>
               <node name="dampening">
                 <properties>
                   <help>Clear BGP route flap dampening information</help>
@@ -28,17 +31,21 @@
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>vtysh -c "clear ip bgp dampening $5"</command>
+                <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
                 <children>
-                  <leafNode name="node.tag">
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                  <node name="node.tag">
                     <properties>
                       <help>Clear BGP route flap dampening information for given network address</help>
                       <completionHelp>
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>vtysh -c "clear ip bgp dampening $5 $6"</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </node>
                 </children>
               </tagNode>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
@@ -51,12 +58,15 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  <leafNode name="all">
+                  <node name="all">
                     <properties>
                       <help>Clear all BGP peering sessions for vrf</help>
                     </properties>
-                    <command>vtysh -c "clear bgp vrf $5 *"</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </node>
                   <leafNode name="node.tag">
                     <properties>
                       <help>Clear BGP neighbor IP address</help>
@@ -64,7 +74,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>vtysh -c "clear bgp vrf $5 $6"</command>
+                    <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
                   </leafNode>
                 </children>
               </tagNode>
@@ -77,7 +87,7 @@
                 <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
             <children>
               #include <include/bgp/reset-bgp-neighbor-options.xml.i>
             </children>

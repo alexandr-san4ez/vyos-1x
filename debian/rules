@@ -2,8 +2,10 @@
 
 DIR := debian/tmp
 DIR_AWS := $(DIR)/vyos-1x-aws
+DIR_LIBVYOSCONFIG := $(DIR)/libvyosconfig
 VYOS_SBIN_DIR := usr/sbin
 VYOS_BIN_DIR := usr/bin
+VYOS_LIB_DIR := usr/lib
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
 VYOS_DATA_DIR := usr/share/vyos
 VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
@@ -158,6 +160,10 @@ override_dh_auto_install:
 
 	mkdir -p $(DIR_AWS)/usr/share/vyos/templates
 	mv $(DIR)/usr/share/vyos/templates/aws/ $(DIR_AWS)/usr/share/vyos/templates
+
+	# libvyosconfig package
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)
+	cp libvyosconfig/_build/libvyosconfig.so $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)/libvyosconfig.so.0
 
 override_dh_installsystemd:
 	dh_installsystemd -pvyos-1x --name vyos-router vyos-router.service

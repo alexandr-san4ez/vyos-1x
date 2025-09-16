@@ -750,7 +750,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for proto, proto_config in redistributes.items():
             if proto == 'table':
                 for table, table_config in proto_config.items():
-                    tmp = f' redistribute table {table}'
+                    tmp = f' redistribute table-direct {table}'
                     if 'metric' in proto_config:
                         metric = proto_config['metric']
                         tmp += f' metric {metric}'

@@ -16,6 +16,7 @@
 
 import os
 
+from copy import deepcopy
 from passlib.hosts import linux_context
 from psutil import users
 from pwd import getpwall
@@ -24,6 +25,7 @@ from pwd import getpwuid
 from sys import exit
 from time import sleep
 
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
@@ -49,12 +51,13 @@ radius_config_file = "/etc/pam_radius_auth.conf"
 tacacs_pam_config_file = "/etc/tacplus_servers"
 tacacs_nss_config_file = "/etc/tacplus_nss.conf"
 nss_config_file = "/etc/nsswitch.conf"
+login_motd_dsa_warning = r'/run/motd.d/90-vyos-user-dsa-deprecation-warning'
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
 # Maximim UID used when adding system users
 MAX_USER_UID: int = 59999
-# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
+# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec0
 MAX_RADIUS_TIMEOUT: int = 50
 # MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
 MAX_RADIUS_COUNT: int = 8
@@ -67,6 +70,13 @@ SYSTEM_USER_SKIP_LIST: list = ['radius_user', 'radius_priv_user', 'tacacs0', 'ta
                               'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
                               'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10',' tacacs11',
                               'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
+
+# As of OpenSSH 9.8p1 in Debian trixie, DSA keys are no longer supported
+SSH_DSA_DEPRECATION_WARNING: str = \
+'The following users are using SSH-DSS keys for authentication. Support for ' \
+'SSH-DSS keys is deprecated and will be removed in VyOS 1.6. Please update ' \
+'affected user keys to a supported algorithm (e.g., RSA, ECDSA, or ED25519) ' \
+'to avoid authentication failures after the upgrade.'
 
 def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
@@ -154,6 +164,17 @@ def verify(login):
                     raise ConfigError(f'Missing type for public-key "{pubkey}"!')
                 if 'key' not in pubkey_options:
                     raise ConfigError(f'Missing key for public-key "{pubkey}"!')
+
+    # Deprecation Warning for SSH DSS keys.
+    gen_header = True
+    if 'user' in login:
+        for user, user_config in login['user'].items():
+            for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
+                if 'type' in pubkey_options and pubkey_options['type'] == 'ssh-dss':
+                    if gen_header:
+                        gen_header = False
+                        DeprecationWarning(SSH_DSA_DEPRECATION_WARNING)
+                    print(f'User "{user}" with deprecated public-key named: {pubkey}')
 
     if {'radius', 'tacacs'} <= set(login):
         raise ConfigError('Using both RADIUS and TACACS at the same time is not supported!')
@@ -289,6 +310,12 @@ def generate(login):
     else:
         if os.path.isfile(autologout_file):
             os.unlink(autologout_file)
+
+    # Generate MOTD informing the user(s) for possible deprecated SSH keys
+    tmp = deepcopy(login)
+    tmp['ssh_dsa_deprecation_warning'] = f'DEPRECATION WARNING: {SSH_DSA_DEPRECATION_WARNING}'
+    render(login_motd_dsa_warning, 'login/motd_user_dsa_warning.j2', tmp,
+        permission=0o644, user='root', group='root')
 
     return None
 

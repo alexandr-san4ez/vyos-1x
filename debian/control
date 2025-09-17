@@ -309,6 +309,7 @@ Depends:
 # End "vpn openconnect"
 # For "system syslog"
   rsyslog,
+  rsyslog-openssl,
 # End "system syslog"
 # For "system option keyboard-layout"
   kbd,

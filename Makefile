@@ -110,10 +110,10 @@ test:
 
 .PHONE: pylint
 pylint: interface_definitions
-	@echo Running "pylint --errors-only ..."
-	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*)
-	@echo Running "pylint to check for unused imports ..."
-	@PYTHONPATH=python/ pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
+	@echo Running "pylint ..."
+	@set -e; \
+	PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*); \
+	PYTHONPATH=python/ pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
 
 .PHONY: j2lint
 j2lint:

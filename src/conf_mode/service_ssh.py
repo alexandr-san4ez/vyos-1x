@@ -16,13 +16,16 @@
 
 import os
 
+from copy import deepcopy
 from sys import exit
 from syslog import syslog
 from syslog import LOG_INFO
 
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
+from vyos.defaults import SSH_DSA_DEPRECATION_WARNING
 from vyos.utils.process import call
 from vyos.template import render
 from vyos import ConfigError
@@ -37,6 +40,13 @@ sshguard_whitelist = '/etc/sshguard/whitelist'
 key_rsa = '/etc/ssh/ssh_host_rsa_key'
 key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
+
+login_motd_dsa_warning = r'/run/motd.d/91-vyos-ssh-dsa-deprecation-warning'
+
+# As of OpenSSH 9.8p1 in Debian trixie, DSA keys are no longer supported
+deprecated_algos = ['ssh-dss', 'ssh-dss-cert-v01@openssh.com']
+SSH_DSA_DEPRECATION_WARNING: str = f'{SSH_DSA_DEPRECATION_WARNING} '\
+'The following hostkey-algorithms are in use:'
 
 def get_config(config=None):
     if config:
@@ -73,6 +83,12 @@ def verify(ssh):
     if 'rekey' in ssh and 'data' not in ssh['rekey']:
         raise ConfigError(f'Rekey data is required!')
 
+    if 'hostkey_algorithm' in ssh:
+        tmp = any(item in deprecated_algos for item in ssh['hostkey_algorithm'])
+        if deprecated_algos:
+            tmp = ', '.join(deprecated_algos)
+            DeprecationWarning(f'{SSH_DSA_DEPRECATION_WARNING} {tmp}')
+
     verify_vrf(ssh)
     return None
 
@@ -96,6 +112,13 @@ def generate(ssh):
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
 
     render(config_file, 'ssh/sshd_config.j2', ssh)
+
+    # Generate MOTD informing the user(s) for possible deprecated SSH hostkey-algorithm
+    tmp = deepcopy(ssh)
+    tmp['ssh_dsa_deprecation_warning'] = f'DEPRECATION WARNING: {SSH_DSA_DEPRECATION_WARNING}'
+    tmp['deprecated_algos'] = deprecated_algos
+    render(login_motd_dsa_warning, 'ssh/motd_ssh_dsa_warning.j2', tmp,
+        permission=0o644, user='root', group='root')
 
     if 'dynamic_protection' in ssh:
         render(sshguard_config_file, 'ssh/sshguard_config.j2', ssh)

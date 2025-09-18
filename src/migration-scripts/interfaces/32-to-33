@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7646: restore behavior of IPv6 default route if only dhcpv6 was defined but
+#        not "ipv6 address autoconf"
+
+from sys import argv
+from sys import exit
+from vyos.configtree import ConfigTree
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['interfaces']
+
+config = ConfigTree(config_file)
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+for type in config.list_nodes(base):
+    for interface in config.list_nodes(base + [type]):
+        iface_base_path = base + [type, interface]
+        dhcpv6_addr_path = iface_base_path + ['address', 'dhcpv6']
+        autoconf_path = iface_base_path + ['ipv6', 'address', 'autoconf']
+        if config.exists(dhcpv6_addr_path) and not config.exists(autoconf_path):
+            config.set(autoconf_path)
+
+        vif_path = iface_base_path + ['vif']
+        if config.exists(vif_path):
+            for vif in config.list_nodes(vif_path):
+                vif_dhcpv6_addr_path = vif_path + [vif, 'address']
+                vif_autoconf_path = vif_path + [vif, 'ipv6', 'address', 'autoconf']
+                if config.exists(vif_dhcpv6_addr_path) and not config.exists(vif_autoconf_path):
+                    config.set(vif_autoconf_path)
+
+        vif_s_path = iface_base_path + ['vif-s']
+        if config.exists(vif_s_path):
+            for vif_s in config.list_nodes(vif_s_path):
+                vif_s_dhcpv6_addr_path = vif_s_path + [vif_s, 'address']
+                vif_s_autoconf_path = vif_s_path + [vif_s, 'ipv6', 'address', 'autoconf']
+                if config.exists(vif_s_dhcpv6_addr_path) and not config.exists(vif_s_autoconf_path):
+                    config.set(vif_s_autoconf_path)
+
+                vif_c_path = iface_base_path + ['vif-s', vif_s, 'vif-c']
+                if config.exists(vif_c_path):
+                    for vif_c in config.list_nodes(vif_c_path):
+                        vif_c_dhcpv6_addr_path = vif_c_path + [vif_c, 'address']
+                        vif_c_autoconf_path = vif_c_path + [vif_c, 'ipv6', 'address', 'autoconf']
+                        if config.exists(vif_c_dhcpv6_addr_path) and not config.exists(vif_c_autoconf_path):
+                            config.set(vif_c_autoconf_path)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)

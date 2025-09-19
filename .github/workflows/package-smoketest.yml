@@ -118,7 +118,7 @@ jobs:
 
   test_smoketest_cli_vpp:
     needs: build_iso
-    runs-on: [self-hosted, azure]
+    runs-on: [self-hosted, vpp]
     timeout-minutes: 90
     container:
       image: vyos/vyos-build:circinus
@@ -217,7 +217,7 @@ jobs:
 
   test_config_load_vpp:
     needs: build_iso
-    runs-on: [self-hosted, azure]
+    runs-on: [self-hosted, vpp]
     timeout-minutes: 90
     container:
       image: vyos/vyos-build:circinus

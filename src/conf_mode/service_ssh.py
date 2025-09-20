@@ -84,10 +84,8 @@ def verify(ssh):
         raise ConfigError(f'Rekey data is required!')
 
     if 'hostkey_algorithm' in ssh:
-        tmp = any(item in deprecated_algos for item in ssh['hostkey_algorithm'])
-        if deprecated_algos:
-            tmp = ', '.join(deprecated_algos)
-            DeprecationWarning(f'{SSH_DSA_DEPRECATION_WARNING} {tmp}')
+        tmp = [algo for algo in ssh['hostkey_algorithm'] if algo in deprecated_algos]
+        if tmp: DeprecationWarning(f'{SSH_DSA_DEPRECATION_WARNING} {", ".join(tmp)}')
 
     verify_vrf(ssh)
     return None

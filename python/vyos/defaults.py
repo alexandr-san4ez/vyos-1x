@@ -81,3 +81,8 @@ rt_global_table = rt_symbolic_names['main']
 DEFAULT_COMMIT_CONFIRM_MINUTES = 10
 
 airbag_noteworthy_size = 20
+
+SSH_DSA_DEPRECATION_WARNING: str = \
+'Support for SSH-DSA keys is deprecated and will be removed in VyOS 1.6. ' \
+'Please update affected keys to a supported algorithm (e.g., RSA, ECDSA or ' \
+'ED25519) to avoid authentication failures after the upgrade.'

@@ -128,6 +128,7 @@ Depends:
   ndppd,
   netavark,
   netplug,
+  net-tools,
   nfct,
   nftables (>= 0.9.3),
   nginx-light,

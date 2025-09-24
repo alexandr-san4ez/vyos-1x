@@ -49,7 +49,7 @@ class L2TPv3If(Interface):
     definition = {
         **Interface.definition,
         **{
-            'section': 'l2tpeth',
+            'section': 'l2tpv3',
             'prefixes': ['l2tpeth', ],
             'bridgeable': True,
         }

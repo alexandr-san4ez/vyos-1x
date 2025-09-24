@@ -246,5 +246,6 @@ Architecture: all
 Depends:
  skopeo,
  snmp,
- vyos-1x
+ vyos-1x,
+ vmtouch
 Description: VyOS build sanity checking toolkit

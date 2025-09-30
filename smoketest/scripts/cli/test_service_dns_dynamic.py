@@ -14,23 +14,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 import tempfile
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.utils.file import read_file
 from vyos.utils.process import cmd
-from vyos.utils.process import process_running
+from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 DDCLIENT_SYSTEMD_UNIT = '/run/systemd/system/ddclient.service.d/override.conf'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
-DDCLIENT_PID = '/run/ddclient/ddclient.pid'
 DDCLIENT_PNAME = 'ddclient'
 
 base_path = ['service', 'dns', 'dynamic']
 name_path = base_path + ['name']
+default_interval = default_value(base_path + ['interval'])
 server = 'ddns.vyos.io'
 hostname = 'test.ddns.vyos.io'
 zone = 'vyos.io'
@@ -40,20 +41,24 @@ ttl = '300'
 interface = 'eth0'
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        # Always start with a clean CLI instance
-        self.cli_delete(base_path)
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceDDNS, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_running(DDCLIENT_PID))
+        self.assertTrue(process_named_running(DDCLIENT_PNAME, timeout=10))
 
         # Delete DDNS configuration
         self.cli_delete(base_path)
         self.cli_commit()
 
-        # PID file must no londer exist after process exited
-        self.assertFalse(os.path.exists(DDCLIENT_PID))
+        # Check for process not running anymore
+        self.assertFalse(process_named_running(DDCLIENT_PNAME))
 
     # IPv4 standard DDNS service configuration
     def test_01_dyndns_service_standard(self):
@@ -93,11 +98,13 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
             # Check the generating config parameters
             ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
-            # default value 300 seconds
-            self.assertIn(f'daemon=300', ddclient_conf)
             self.assertIn(f'usev4=ifv4', ddclient_conf)
             self.assertIn(f'ifv4={interface}', ddclient_conf)
             self.assertIn(f'password=\'{password}\'', ddclient_conf)
+
+            # Check default interval of 300 seconds
+            systemd_override = read_file(DDCLIENT_SYSTEMD_UNIT)
+            self.assertIn(f'--daemon {default_interval}', systemd_override)
 
             for opt in details.keys():
                 if opt == 'username':
@@ -138,7 +145,6 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check the generating config parameters
         ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
-        self.assertIn(f'daemon={interval}', ddclient_conf)
         self.assertIn(f'usev6=ifv6', ddclient_conf)
         self.assertIn(f'ifv6={interface}', ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
@@ -147,6 +153,10 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'password=\'{password}\'', ddclient_conf)
         self.assertIn(f'min-interval={wait_time}', ddclient_conf)
         self.assertIn(f'max-interval={expiry_time_good}', ddclient_conf)
+
+        # default value 300 seconds
+        systemd_override = read_file(DDCLIENT_SYSTEMD_UNIT)
+        self.assertIn(f'--daemon {interval}', systemd_override)
 
     # IPv4+IPv6 dual DDNS service configuration
     def test_03_dyndns_service_dual_stack(self):
@@ -337,9 +347,10 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check for process in VRF
-        systemd_override = cmd(f'cat {DDCLIENT_SYSTEMD_UNIT}')
-        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient -file {DDCLIENT_CONF}',
-                      systemd_override)
+        systemd_override = read_file(DDCLIENT_SYSTEMD_UNIT)
+        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient ' \
+                      f'--file {DDCLIENT_CONF} --cache {DDCLIENT_CONF.replace("conf", "cache")} ' \
+                      f'--foreground --daemon {default_interval}', systemd_override)
 
         # Check for process in VRF
         proc = cmd(f'ip vrf pids {vrf_name}')

@@ -33,6 +33,7 @@ from vyos.utils.dict import dict_set_nested
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmd
+from vyos.utils.network import interface_exists
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import call
 from vyos.configquery import op_mode_config_dict
@@ -315,12 +316,12 @@ def _get_kernel_data(raw, ifname = None, detail = False,
     if ifname:
         # Check if the interface exists
         if not interface_exists(ifname):
-            raise vyos.opmode.Error(f"{ifname} does not exist!")
-        int_name = f' dev {ifname}'
+            raise vyos.opmode.IncorrectValue(f"{ifname} does not exist!")
+        int_name = f'dev {ifname}'
     else:
         int_name = ''
 
-    kernel_interface = json.loads(cmd(f'ip -j -d -s address show{int_name}'))
+    kernel_interface = json.loads(cmd(f'ip -j -d -s address show {int_name}'))
 
     # Return early if raw
     if raw:
@@ -362,11 +363,12 @@ def _format_kernel_data(data, detail, statistics):
         has_global = False
 
         for ip in interface['addr_info']:
-            if ip.get('scope') == 'global':
+            if ip.get('scope') in ('global', 'host'):
                 has_global = True
                 local = ip.get('local', '-')
                 prefixlen = ip.get('prefixlen', '')
                 ip_list.append(f"{local}/{prefixlen}")
+
 
         # If no global IP address, add '-'; indicates no IP address on interface
         if not has_global:

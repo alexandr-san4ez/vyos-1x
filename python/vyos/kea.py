@@ -563,9 +563,9 @@ def kea_get_server_leases(config, inet, pools=[], state=[], origin=None) -> list
         data_lease['origin'] = 'local'  # TODO: Determine remote in HA
         # remove trailing dot in 'hostname' to ensure consistency for `vyos-hostsd-client`
         data_lease['hostname'] = lease.get('hostname', '').rstrip('.') or '-'
+        data_lease['mac'] = lease.get('hw-address', '-')
 
         if inet == '4':
-            data_lease['mac'] = lease['hw-address']
             data_lease['start'] = lease['start_time'].timestamp()
 
         if inet == '6':

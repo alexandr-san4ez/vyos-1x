@@ -156,4 +156,4 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

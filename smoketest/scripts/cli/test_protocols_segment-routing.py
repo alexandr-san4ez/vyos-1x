@@ -110,4 +110,4 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sysctl_read(f'net.ipv6.conf.{first_if}.seg6_enabled'), '0')
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -185,3 +185,8 @@ def remove_footer(file_name):
 def add_system_version_string(config_str: str = None) -> str:
     """Wrap config string with system version and return string."""
     return (config_str or '') + '\n' +  system_footer()
+
+def append_system_version(file: str):
+    """Append system version data to file"""
+    with open(file, 'a') as f:
+        f.write(add_system_version_string())

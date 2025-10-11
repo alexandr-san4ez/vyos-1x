@@ -1266,6 +1266,9 @@ class Interface(Control):
         self.set_dhcp(False)
         self.set_dhcpv6(False)
 
+        if not self.exists(self.ifname):
+            return
+
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
 

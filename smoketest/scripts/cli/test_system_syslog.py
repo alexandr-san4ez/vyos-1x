@@ -303,12 +303,17 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         self._set_tls_certificates()
 
         rhosts = {
+            '172.10.0.1': {
+                'facility': {'all': {'level': 'debug'}},
+                'port': '6514',
+                'protocol': 'udp',
+                'tls': {},
+            },
             '172.10.0.2': {
                 'facility': {'all': {'level': 'debug'}},
                 'port': '6514',
                 'protocol': 'udp',
                 'tls': {
-                    'enable': True,
                     'auth-mode': 'anon',
                 },
             },
@@ -317,7 +322,6 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 'port': '6514',
                 'protocol': 'tcp',
                 'tls': {
-                    'enable': True,
                     'ca-certificate': ca_cert_name,
                     'auth-mode': 'certvalid',
                 },
@@ -327,7 +331,6 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 'port': '6514',
                 'protocol': 'tcp',
                 'tls': {
-                    'enable': True,
                     'ca-certificate': ca_cert_name,
                     'certificate': client_cert_name,
                     'auth-mode': 'fingerprint',
@@ -339,7 +342,6 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 'port': '6514',
                 'protocol': 'tcp',
                 'tls': {
-                    'enable': True,
                     'ca-certificate': ca_cert_name,
                     'certificate': client_cert_name,
                     'auth-mode': 'name',
@@ -366,11 +368,11 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(remote_base + ['protocol'], value=protocol)
 
             tls = remote_options['tls']
-            for key, value in tls.items():
-                if key == 'enable':
-                    self.cli_set(remote_base + ['tls', 'enable'])
-                else:
+            if tls:
+                for key, value in tls.items():
                     self.cli_set(remote_base + ['tls', key], value=value)
+            else:
+                self.cli_set(remote_base + ['tls'])
 
         self.cli_commit()
 
@@ -411,6 +413,9 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 if 'permitted-peers' in tls:
                     value = tls['permitted-peers']
                     self.assertIn(f'StreamDriverPermittedPeers="{value}"', config)
+
+                if not tls:
+                    self.assertIn(f'StreamDriverAuthMode="anon"', config)
 
     def test_vrf_source_address(self):
         rhosts = {

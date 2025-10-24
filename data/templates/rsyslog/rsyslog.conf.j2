@@ -61,7 +61,7 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {{ tmp | join(';') }} action(type="omfwd"
     target="{{ host_name }}"
     port="{{ host_options.port }}"
-    protocol="{{ 'tcp' if tls.enable is vyos_defined else host_options.protocol }}"
+    protocol="{{ 'tcp' if tls is vyos_defined else host_options.protocol }}"
     TCP_Framing="{{ 'octed-counted' if host_options.format.octet_counted is vyos_defined else 'traditional' }}"
 {%         if host_options.format.include_timezone is vyos_defined %}
     template="RSYSLOG_SyslogProtocol23Format"
@@ -69,7 +69,7 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {%         if host_options.source_address is vyos_defined %}
     Address="{{ host_options.source_address }}"
 {%         endif %}
-{%         if tls.enable is vyos_defined %}
+{%         if tls is vyos_defined %}
 {%             set auth_mode = tls.auth_mode %}
         # Specify the use of the OpenSSL TLS driver for this action
         StreamDriver="ossl"

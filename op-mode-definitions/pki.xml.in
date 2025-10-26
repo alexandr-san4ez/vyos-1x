@@ -581,6 +581,14 @@
           <help>Manual certbot renewal</help>
         </properties>
         <command>${vyos_op_scripts_dir}/pki.py --action certbot_renew</command>
+        <children>
+          <leafNode name="force">
+            <properties>
+              <help>Force manual certbot renewal</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/pki.py --action certbot_renew --force</command>
+          </leafNode>
+        </children>
       </node>
     </children>
   </node>

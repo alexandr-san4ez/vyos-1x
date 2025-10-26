@@ -163,7 +163,8 @@ def get_config(config=None):
 
     if len(argv) > 1 and argv[1] == 'certbot_renew':
         pki['certbot_renew'] = {}
-
+    elif len(argv) > 1 and argv[1] == 'certbot_renew_force':
+        pki['certbot_renew'] = {'force': {}}
 
     # Walk through the list of sync_translate mapping and build a list
     # which is later used to check if the node was changed in the CLI config

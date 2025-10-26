@@ -993,6 +993,8 @@ def renew_certbot(force: typing.Optional[bool] = False):
         Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI ' \
                 'subsystem...\n\n')
         out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py"')
+    elif force:
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew_force"')
     else:
         out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew"')
 
@@ -1037,6 +1039,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--filename', help='Write certificate into specified filename', action='store')
     parser.add_argument('--key-filename', help='Write key into specified filename', action='store')
+
+    # Certbot force
+    parser.add_argument('--force', help='Force operation - currently only used for certbot', action='store_true')
+
 
     args = parser.parse_args()
 
@@ -1119,7 +1125,7 @@ if __name__ == '__main__':
                 print('\n')
                 show_crl()
         elif args.action == 'certbot_renew':
-            renew_certbot()
+            renew_certbot(args.force)
 
     except KeyboardInterrupt:
         print("Aborted")

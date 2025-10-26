@@ -151,6 +151,32 @@ def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     cmd(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
     return None
 
+def certbot_renew(config: dict, force: bool=False) -> None:
+    """ Renew all certificates managed via certbot """
+    tmp = f'certbot renew --no-random-sleep-on-renew ' \
+          f'--config-dir {vyos_certbot_dir}'
+
+    # Determine services using ACME based certificates
+    pre_hook_services = []
+    for used_by, _ in dict_search_recursive(config, 'used_by'):
+        pre_hook_services.extend(used_by)
+    # Remove duplicate items from list
+    pre_hook_services = list(set(pre_hook_services))
+    # Automatically add services in use to pre_hook_services depending on service
+    # name in vyos.defaults.systemd_services
+    if pre_hook_services:
+        services = []
+        for service in pre_hook_services:
+            if service in systemd_services:
+                services.append(systemd_services[service])
+        tmp += ' --pre-hook "systemctl stop ' + ' '.join(services) + '"'
+
+    if force:
+        tmp += ' --force-renewal'
+
+    print(cmd(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
+    return None
+
 def get_config(config=None):
     if config:
         conf = config
@@ -507,7 +533,8 @@ def generate(pki):
     # Certbot renewal only needs to re-trigger the services to load up the
     # new PEM file
     if 'certbot_renew' in pki:
-        return None
+        force = 'force' in pki['certbot_renew']
+        return certbot_renew(config=pki, force=force)
 
     certbot_list = []
     certbot_list_on_disk = []

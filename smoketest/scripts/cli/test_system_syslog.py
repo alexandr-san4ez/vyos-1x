@@ -269,13 +269,13 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             '172.10.0.1': {
                 'facility': {'all': {'level': 'debug'}},
                 'port': '6514',
-                'protocol': 'udp',
+                'protocol': 'tcp',
                 'tls': {},
             },
             '172.10.0.2': {
                 'facility': {'all': {'level': 'debug'}},
                 'port': '6514',
-                'protocol': 'udp',
+                'protocol': 'tcp',
                 'tls': {
                     'auth-mode': 'anon',
                 },
@@ -297,7 +297,10 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                     'ca-certificate': ca_cert_name,
                     'certificate': client_cert_name,
                     'auth-mode': 'fingerprint',
-                    'permitted-peers': 'SHA1:E1:DB:C4:FF:83:54:85:40:2D:56:E7:1A:C3:FF:70:22:0F:21:74:ED',
+                    'permitted-peer': [
+                        'SHA1:E1:DB:C4:FF:83:54:85:40:2D:56:E7:1A:C3:FF:70:22:0F:21:74:ED',
+                        ' SHA1:FF:70:22:0F:21:74:ED:54:85:40:2D:56:E7:1A:C3:E1:DB:C4:FF:83 ',
+                    ],
                 },
             },
             '172.10.0.5': {
@@ -308,7 +311,10 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                     'ca-certificate': ca_cert_name,
                     'certificate': client_cert_name,
                     'auth-mode': 'name',
-                    'permitted-peers': 'logs.example.com',
+                    'permitted-peer': [
+                        'logs.example.com',
+                        '   ',
+                    ],
                 },
             },
         }
@@ -333,7 +339,12 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             tls = remote_options['tls']
             if tls:
                 for key, value in tls.items():
-                    self.cli_set(remote_base + ['tls', key], value=value)
+                    if type(value) is list:
+                        values = value
+                        for value in values:
+                            self.cli_set(remote_base + ['tls', key], value=value)
+                    else:
+                        self.cli_set(remote_base + ['tls', key], value=value)
             else:
                 self.cli_set(remote_base + ['tls'])
 
@@ -373,12 +384,27 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                     auth_mode = value if value == 'anon' else f'x509/{value}'
                     self.assertIn(f'StreamDriverAuthMode="{auth_mode}"', config)
 
-                if 'permitted-peers' in tls:
-                    value = tls['permitted-peers']
+                if 'permitted-peer' in tls:
+                    values = tls['permitted-peer']
+                    value = ','.join([v.strip() for v in values if v.strip()])
                     self.assertIn(f'StreamDriverPermittedPeers="{value}"', config)
 
                 if not tls:
                     self.assertIn(f'StreamDriverAuthMode="anon"', config)
+
+    def test_remote_tls_protocol_udp(self):
+        remote_base = base_path + ['host', '172.11.0.1']
+        self.cli_set(remote_base + ['port'], value='6514')
+        self.cli_set(remote_base + ['facility', 'all', 'level'], value='debug')
+        self.cli_set(remote_base + ['protocol'], value='udp')
+        self.cli_set(remote_base + ['tls'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['host', '172.11.0.1', 'protocol'], value='tcp')
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

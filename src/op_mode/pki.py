@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import tabulate
+import typing
 
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
@@ -503,7 +504,7 @@ def generate_certificate_sign(name, ca_name, install=False, file=False):
         return None
 
     cert = generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False)
-    
+
     passphrase = None
     if private_key is not None:
         passphrase = ask_passphrase()
@@ -977,6 +978,28 @@ def show_crl(name=None, pem=False):
     print("Certificate Revocation Lists:")
     print(tabulate.tabulate(data, headers))
 
+def renew_certbot(force: typing.Optional[bool] = False):
+    from vyos.defaults import directories
+
+    certbot_config = directories['certbot']
+    vyos_conf_scripts_dir = directories['conf_mode']
+
+    if force and not os.path.isdir(f'{certbot_config}'):
+        # Assume someone deleted the certbot_config folder, renew alone will not
+        # work as there are no configuration files left to know what to renew.
+        # Re-run CLI PKI helper to initially request certificates via ACME
+        # again. This should never be the case - but sometimes the universe has
+        # a bad time
+        Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI ' \
+                'subsystem...\n\n')
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py"')
+    elif force:
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew_force"')
+    else:
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew"')
+
+    print(out)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--action', help='PKI action', required=True)
@@ -1016,6 +1039,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--filename', help='Write certificate into specified filename', action='store')
     parser.add_argument('--key-filename', help='Write key into specified filename', action='store')
+
+    # Certbot force
+    parser.add_argument('--force', help='Force operation - currently only used for certbot', action='store_true')
+
 
     args = parser.parse_args()
 
@@ -1097,6 +1124,9 @@ if __name__ == '__main__':
                 show_certificate()
                 print('\n')
                 show_crl()
+        elif args.action == 'certbot_renew':
+            renew_certbot(args.force)
+
     except KeyboardInterrupt:
         print("Aborted")
         sys.exit(0)

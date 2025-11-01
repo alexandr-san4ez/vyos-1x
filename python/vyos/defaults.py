@@ -39,6 +39,7 @@ directories = {
 
 systemd_services = {
     'haproxy' : 'haproxy.service',
+    'openconnect': 'ocserv.service',
 }
 
 internal_ports = {

@@ -358,7 +358,7 @@ class Interface(Control):
         cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
         self._cmd(cmd)
 
-    def remove(self):
+    def remove(self, skip_delete=False):
         """
         Remove interface from operating system. Removing the interface
         deconfigures all assigned IP addresses and clear possible DHCP(v6)
@@ -372,11 +372,19 @@ class Interface(Control):
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
-        # can not delete ALL interfaces, see below
+        # can not delete ALL interfaces, see below.
+        #
+        # This will internally stop DHCP(v6) if running
         self.flush_addrs()
 
         # remove interface from conntrack VRF interface map
         self._del_interface_from_ct_iface_map()
+
+        # Some interfaces - mainly veth pairs - should be properly de-configured
+        # but not deleted. Deleting one veth pair member will delete the other,
+        # we need need a way to skip the deletion.
+        if skip_delete:
+            return
 
         # ---------------------------------------------------------------------
         # Any class can define an eternal regex in its definition

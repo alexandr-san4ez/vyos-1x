@@ -28,13 +28,12 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
-from vyos.ifconfig import Interface
+from vyos.container import restart_network
 from vyos.utils.cpu import get_core_count
 from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.utils.network import interface_exists
 from vyos.template import bracketize_ipv6
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
@@ -506,21 +505,8 @@ def apply(container):
     if disabled_new:
         call('systemctl daemon-reload')
 
-    # Start network and assign it to given VRF if requested. this can only be done
-    # after the containers got started as the podman network interface will
-    # only be enabled by the first container and yet I do not know how to enable
-    # the network interface in advance
-    if 'network' in container:
-        for network, network_config in container['network'].items():
-            network_name = f'pod-{network}'
-            # T5147: Networks are started only as soon as there is a consumer.
-            # If only a network is created in the first place, no need to assign
-            # it to a VRF as there's no consumer, yet.
-            if interface_exists(network_name):
-                tmp = Interface(network_name)
-                tmp.set_vrf(network_config.get('vrf', ''))
-                tmp.add_ipv6_eui64_address('fe80::/64')
-
+    # Re-Start network and assign it to given VRF if requested.
+    restart_network(container)
     return None
 
 

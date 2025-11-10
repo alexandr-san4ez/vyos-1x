@@ -14,14 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
+from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
+from vyos.template import get_dhcp_router
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
@@ -540,7 +544,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.assertIsNotNone(router, 'DHCP router should be available')
 
         # Verify FRR configuration contains the static routes with DHCP router
-        frrconfig = self.getFRRconfig('ip route')
+        frrconfig = self.getFRRconfig('ip route', end='')
 
         for route in dhcp_routes.keys():
             expected_route = f'ip route {route} {router} {dhcp_interface}'
@@ -558,7 +562,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify table route in FRR config
-        frrconfig = self.getFRRconfig('ip route')
+        frrconfig = self.getFRRconfig('ip route', end='')
         expected_table_route = (
             f'ip route {table_route} {router} {dhcp_interface} table {table_id}'
         )

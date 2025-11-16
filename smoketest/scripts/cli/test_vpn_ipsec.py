@@ -1125,10 +1125,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_lines:
             self.assertIn(line, swanctl_conf)
 
-        swanctl_unexpected_lines = [
-            f'auth = eap-',
-            f'eap_id'
-        ]
+        swanctl_unexpected_lines = [f'auth = eap-', f'eap_id', f'send_cert =']
         for unexpected_line in swanctl_unexpected_lines:
             self.assertNotIn(unexpected_line, swanctl_conf)
 
@@ -1144,6 +1141,22 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
+
+        # Add the always-send-cert config and observe the change
+        self.cli_set(
+            base_path
+            + [
+                'remote-access',
+                'connection',
+                conn_name,
+                'authentication',
+                'always-send-cert',
+            ]
+        )
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertIn(f'send_cert = always', swanctl_conf)
 
         self.tearDownPKI()
 

@@ -44,6 +44,7 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
+from vyos.utils.file import file_compare
 
 SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
 config_json = '/run/vyatta/config/config.json'
@@ -94,7 +95,7 @@ def unsaved_commits(allow_missing_config=False) -> bool:
         return True
     tmp_save = '/tmp/config.running'
     save_config(tmp_save)
-    ret = not cmp(tmp_save, config_file, shallow=False)
+    ret = not file_compare(tmp_save, config_file)
     os.unlink(tmp_save)
     return ret
 

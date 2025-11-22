@@ -9,22 +9,16 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
-<<<<<<< HEAD
-  check-pr-conflict:
-    if: github.repository_owner == 'vyos'
-    uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@sagitta
-=======
   check-prs-conflict:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request_target' && github.event.action == 'synchronize') ||
       (github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.merged == true)
-    uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@current
+    uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@sagitta
     permissions:
       contents: read
       pull-requests: write
->>>>>>> 6f5f7ce41 (T7981: prs conflict check workflow updated to use schedule)
     secrets: inherit
     with:
-      action-ref: 'current'
+      action-ref: 'sagitta'

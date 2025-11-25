@@ -16,6 +16,7 @@
 
 from sys import exit
 from sys import argv
+import os
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -23,6 +24,7 @@ from vyos.configdict import get_dhcp_interfaces
 from vyos.configdict import get_pppoe_interfaces
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
+from vyos.utils.file import write_file
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos import ConfigError
@@ -31,6 +33,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-static.conf'
+DHCP_HOOK_IFLIST = '/tmp/static_dhcp_interfaces'
 
 def get_config(config=None):
     if config:
@@ -93,6 +96,22 @@ def verify(static):
     return None
 
 def generate(static):
+    # Collect interfaces that have DHCP configuration for DHCP hooks
+    dhcp_interfaces = set()
+
+    # Check for DHCP interfaces in route configurations
+
+    if static and 'route' in static:
+        for prefix, prefix_options in static['route'].items():
+            if 'dhcp_interface' in prefix_options:
+                dhcp_interfaces.add(prefix_options['dhcp_interface'])
+
+    # Write the interface list for DHCP hooks or clean up if empty
+    if dhcp_interfaces:
+        write_file(DHCP_HOOK_IFLIST, " ".join(dhcp_interfaces))
+    elif os.path.exists(DHCP_HOOK_IFLIST):
+        os.unlink(DHCP_HOOK_IFLIST)
+
     if not static:
         return None
 

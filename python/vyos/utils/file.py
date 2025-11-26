@@ -164,3 +164,30 @@ def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_i
     """ Waits for a process to close a file after opening it in write mode. """
     wait_for_inotify(file_path,
       event_type='IN_CLOSE_WRITE', pre_hook=pre_hook, timeout=timeout, sleep_interval=sleep_interval)
+
+
+def file_compare(file1: str, file2: str) -> bool:
+    """
+    Compare two files modulo blank lines, leading/trailing whitespace, final
+    newline.
+
+    Returns:
+        bool: True if files are equivalent in the sense above.
+
+    """
+
+    def non_empty(line):
+        return bool(line.strip())
+
+    with open(file1) as f1, open(file2) as f2:
+        it1 = filter(non_empty, f1)
+        it2 = filter(non_empty, f2)
+
+        try:
+            for l1, l2 in zip(it1, it2, strict=True):
+                if l1.strip() != l2.strip():
+                    return False
+        except ValueError:
+            return False
+
+        return True

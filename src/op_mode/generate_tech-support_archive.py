@@ -23,6 +23,7 @@ from shutil import rmtree
 from socket import gethostname
 from sys import exit
 from tarfile import open as tar_open
+from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
 from vyos.remote import upload
 
@@ -91,6 +92,114 @@ def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
     with tar_open(name=archive_file, mode='x:gz') as tar_file:
         tar_file.add(tmp_dir_path, arcname=os.path.basename(tmp_dir_path))
 
+def __ensure_known_host_has_entry(host: str, port: int = 22) -> bool:
+    """
+    Ensure the SSH host key for this server is the first plain‑text entry in
+    known_hosts.
+
+    cURL's SFTP implementation can fail key exchange when the file
+    begins with unrelated hashed hosts, because it may select the wrong hostkey
+    type. By adding or moving the correct key to the beginning of the file, we
+    guarantee that cURL negotiates successfully and the upload works.
+
+    Returns True if file was modified, otherwise False.
+
+    :param host: hostname of the server
+    :type host: str
+    :param port: port of the server
+    :type port: int
+    """
+
+    known_hosts = Path('/root/.ssh/known_hosts')
+    if not known_hosts.exists():
+        return False  # No change needed for not existing file
+
+    # Read current contents
+    lines = [line.rstrip() for line in known_hosts.read_text().splitlines()]
+
+    # Check if the first line already matches this host
+    if lines and lines[0].startswith(f'{host} '):
+        return False  # No change needed
+
+    # Run ssh-keyscan to get the current host key
+    try:
+        result = cmd(['ssh-keyscan', '-p', str(port), host])
+    except OSError as err:
+        print(err)
+        return False  # Failed to run ssh-keyscan, treat as no change
+
+    keys = result.strip().splitlines()
+    if not keys:
+        return False  # No changes are required since there are no host keys
+    new_key = keys[0]
+
+    # Remove all existing plain entries for the same host (avoid duplicates)
+    new_lines = [line for line in lines if not line.startswith(f'{host} ')]
+
+    # Insert new key at the top
+    new_lines.insert(0, new_key)
+
+    # Atomic write back
+    temp_known_hosts = known_hosts.with_suffix('.tmp')
+    temp_known_hosts.write_text('\n'.join(new_lines) + '\n')
+    os.replace(temp_known_hosts, known_hosts)  # atomic rename
+
+    return True
+
+def __upload_to_vyos(path: str, ticket: str, user: str):
+    """
+    Upload an archive over SFTP to VyOS support system.
+
+    :param path: path to archived file
+    :type path: str
+    :param ticket: ID of the ticket provided by user
+    :type ticket: str
+    :param user: name of user for uploading archive
+    :type user: str
+    """
+
+    host = 'ticket-files.vyos.io'
+
+    # XXX: cURL SFTP host key workaround
+    # When cURL performs SFTP transfers using libssh2 it reads /root/.ssh/known_hosts
+    # to decide which host‑key algorithms to prefer during the SSH handshake.
+    # If the first entry in known_hosts is a hashed hostname, cURL cannot
+    # identify which host it belongs to and may incorrectly apply its key type
+    # (for example "ssh‑rsa" instead "ssh-ed25519") to every connection.
+    # Many modern servers disable older algorithms like ssh‑rsa,
+    # so the handshake can fail with:
+    #
+    #     * Connected to example.com (127.0.0.1) port 22
+    #     * libssh2 cryptography backend: openssl compatible
+    #     * Found host example.com in /root/.ssh/known_hosts
+    #     * Set "ssh‑rsa" as SSH hostkey type
+    #     * Failure establishing ssh session: -5, Unable to exchange encryption keys
+    #
+    # More details about this bug here:
+    #  - https://github.com/libssh2/libssh2/issues/676#issuecomment-1741877207
+    #
+    # To avoid this, we ensure that the correct host's plain‑text key entry is
+    # explicitly present and placed at the beginning of known_hosts before running
+    # cURL. The function below does the following:
+    #
+    #   * Runs ssh‑keyscan to obtain the current public host key for the target.
+    #   * If an entry for the host already exists and is the first line, no action
+    #     is taken (idempotent behavior).
+    #   * If the entry exists deeper in the file, it is moved to the top.
+    #   * If no entry exists, it is added as the first line.
+    #
+    # This guarantees that cURL's SFTP logic reads the correct key information
+    # first, avoiding false key‑type restrictions and ensuring reliable transfers.
+    known_host_modified = __ensure_known_host_has_entry(host)
+    if known_host_modified:
+        print(f'Updated `known_hosts` for {host}')
+
+    # XXX: we call curl here because cURL's SFTP can work
+    # without requiring directory listing on the server
+    # Almost everything else requires it and fails to work
+    # with our write-only server.
+    os.system(f'curl --upload-file {path} sftp://{host}/{ticket}/ --user {user}')
+
 
 if __name__ == '__main__':
     defualt_tmp_dir = '/tmp'
@@ -124,6 +233,8 @@ if __name__ == '__main__':
     tmp_dir: Path = Path(tmp_dir_path)
     tmp_dir.mkdir(parents=True)
 
+    archive_file_path = f'{tmp_path}/{archive_file_name}'
+
     report_file: Path = Path(f'{tmp_dir_path}/show_tech-support_report.txt')
     report_file.touch()
     try:
@@ -133,20 +244,15 @@ if __name__ == '__main__':
         __generate_archived_files(tmp_dir_path)
 
         # Generate main archive
-        __generate_main_archive_file(f'{tmp_path}/{archive_file_name}', tmp_dir_path)
+        __generate_main_archive_file(archive_file_path, tmp_dir_path)
         # Delete temporary directory
         rmtree(tmp_dir)
         # Upload to remote site if it is scpecified
         if remote:
             if args.ticket:
-                # XXX: we call curl here because cURL's SFTP can work
-                # without requiring directory listing on the server
-                # Almost everything else requires it and fails to work
-                # with our write-only server.
-                os.system(f'curl --upload-file {tmp_path}/{archive_file_name} \
-                  sftp://ticket-files.vyos.io/{args.ticket}/ --user {args.user}')
+                __upload_to_vyos(archive_file_path, args.ticket, args.user)
             else:
-                upload(f'{tmp_path}/{archive_file_name}', args.path)
+                upload(archive_file_path, args.path)
         print(f'Debug file is generated and located in {location_path}/{archive_file_name}')
     except Exception as err:
         print(f'Error during generating a debug file: {err}')

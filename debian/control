@@ -176,6 +176,8 @@ Depends:
   python3-zmq,
   qrencode,
   radvd (>= 2.20),
+  rsyslog,
+  rsyslog-openssl,
   salt-minion,
   sed,
   smartmontools,

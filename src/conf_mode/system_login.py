@@ -25,6 +25,7 @@ from pwd import getpwuid
 from sys import exit
 from time import sleep
 
+from vyos.base import Warning
 from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configverify import verify_vrf

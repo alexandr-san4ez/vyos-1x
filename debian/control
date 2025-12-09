@@ -91,6 +91,7 @@ Depends:
   hostapd,
   hsflowd,
   hvinfo,
+  hwloc,
   igmpproxy,
   ipaddrcheck,
   iperf,

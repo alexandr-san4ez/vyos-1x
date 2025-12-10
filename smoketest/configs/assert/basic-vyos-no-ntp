@@ -1,25 +1,9 @@
 set interfaces dummy dum0 address '172.18.254.203/32'
 set interfaces ethernet eth0 duplex 'auto'
-set interfaces ethernet eth0 offload gro
-set interfaces ethernet eth0 offload gso
-set interfaces ethernet eth0 offload sg
-set interfaces ethernet eth0 offload tso
 set interfaces ethernet eth0 speed 'auto'
 set interfaces ethernet eth0 vif 203 address '172.18.203.10/24'
 set interfaces ethernet eth1 duplex 'auto'
-set interfaces ethernet eth1 offload gro
-set interfaces ethernet eth1 offload gso
-set interfaces ethernet eth1 offload sg
-set interfaces ethernet eth1 offload tso
 set interfaces ethernet eth1 speed 'auto'
-set interfaces ethernet eth2 offload gro
-set interfaces ethernet eth2 offload gso
-set interfaces ethernet eth2 offload sg
-set interfaces ethernet eth2 offload tso
-set interfaces ethernet eth3 offload gro
-set interfaces ethernet eth3 offload gso
-set interfaces ethernet eth3 offload sg
-set interfaces ethernet eth3 offload tso
 set protocols ospf area 0 network '172.18.203.0/24'
 set protocols ospf area 0 network '172.18.254.203/32'
 set protocols ospf interface eth0.203 authentication md5 key-id 10 md5-key 'vyos'

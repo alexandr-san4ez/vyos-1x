@@ -1,3 +1,5 @@
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
 set interfaces ethernet eth0 vif 5 address 'dhcpv6'
 set interfaces ethernet eth0 vif 5 ipv6 address autoconf
 set interfaces ethernet eth0 vif-s 10 address 'dhcpv6'
@@ -22,6 +24,7 @@ set interfaces pppoe pppoe0 dhcpv6-options pd 0 interface eth1.60 sla-id '1'
 set interfaces pppoe pppoe0 dhcpv6-options pd 0 interface eth1.60.70 address '1'
 set interfaces pppoe pppoe0 dhcpv6-options pd 0 interface eth1.60.70 sla-id '1'
 set interfaces pppoe pppoe0 dhcpv6-options pd 0 length '56'
+set interfaces pppoe pppoe0 ipv6 address autoconf
 set interfaces pppoe pppoe0 no-peer-dns
 set interfaces pppoe pppoe0 source-interface 'eth2'
 set service ntp allow-client address '2001:db8::/32'
@@ -32,11 +35,19 @@ set service router-advert interface eth1.50 prefix ::/64 valid-lifetime '5400'
 set service router-advert interface eth1.60 prefix ::/64
 set service router-advert interface eth1.60.70 prefix ::/64
 set system config-management commit-revisions '15'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
 set system domain-name 'vyos.net'
 set system host-name 'ipv6-r1'
 set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
 set system login user vyos authentication plaintext-password ''
 set system name-server '2001:db8::1'
 set system name-server '2001:db8::2'
-set system syslog local facility all level 'debug'
-set system console device ttyS0 speed '115200'
+set system syslog global facility all level 'debug'
+set system syslog global facility local7 level 'debug'
+set system time-zone 'Europe/Berlin'

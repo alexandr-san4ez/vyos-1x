@@ -1,7 +1,5 @@
-set firewall global-options timeout icmp '30'
-set firewall global-options timeout other '600'
-set firewall global-options timeout udp other '300'
-set firewall global-options timeout udp stream '300'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
 set interfaces ethernet eth0 vif 5 address '192.0.2.1/24'
 set interfaces ethernet eth1 vif 7 description 'FTTH-PPPoE'
 set nat source rule 100 log
@@ -23,13 +21,16 @@ set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
 set system conntrack table-size '262144'
-set system conntrack timeout
+set system conntrack timeout icmp '30'
+set system conntrack timeout other '600'
+set system conntrack timeout udp other '300'
+set system conntrack timeout udp stream '300'
 set system console device ttyS0 speed '115200'
 set system domain-name 'vyos.net'
 set system host-name 'vyos'
 set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
 set system login user vyos authentication plaintext-password ''
 set system name-server '172.16.254.30'
-set system syslog local facility all level 'debug'
-set system syslog local facility local7 level 'debug'
-set system syslog remote 172.16.100.1 facility all level 'warning'
+set system syslog global facility all level 'debug'
+set system syslog global facility local7 level 'debug'
+set system syslog host 172.16.100.1 facility all level 'warning'

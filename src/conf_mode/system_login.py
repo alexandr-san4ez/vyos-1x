@@ -79,9 +79,9 @@ def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
     for s_user in getpwall():
-        if getpwnam(s_user.pw_name).pw_uid < min_uid:
+        if s_user.pw_uid < min_uid:
             continue
-        if getpwnam(s_user.pw_name).pw_uid > max_uid:
+        if s_user.pw_uid > max_uid:
             continue
         if s_user.pw_name in SYSTEM_USER_SKIP_LIST:
             continue

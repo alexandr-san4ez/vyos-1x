@@ -78,7 +78,7 @@ jobs:
           path: |
             build/live-image-amd64.hybrid.iso
             build/manifest.json
-      - uses: eviden-actions/clean-self-hosted-runner@v1.3.6
+      - uses: atos-actions/clean-self-hosted-runner@v1.4.10
         if: ${{ always() }}
 
   test_smoketest_cli:

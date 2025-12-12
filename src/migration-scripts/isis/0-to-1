@@ -37,16 +37,24 @@ if not config.exists(base):
     # Nothing to do
     exit(0)
 
-# We need a temporary copy of the config
-tmp_base = ['protocols', 'isis2']
-config.copy(base, tmp_base)
+if not config.is_tag(base):
+    # Nothing to do
+    exit(0)
+
+# Get IS-IS domain ID
+domain_id = config.list_nodes(base)
+if domain_id:
+    # We need a temporary copy of the config
+    tmp_base = ['protocols', 'isis2']
+    config.copy(base + domain_id, tmp_base)
 
 # Now it's save to delete the old configuration
 config.delete(base)
 
 # Rename temporary copy to new final config (IS-IS domain key is static and no
 # longer required to be set via CLI)
-config.rename(tmp_base, 'isis')
+if config.exists(tmp_base):
+    config.rename(tmp_base, 'isis')
 
 try:
     with open(file_name, 'w') as f:

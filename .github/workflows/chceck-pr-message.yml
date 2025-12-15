@@ -4,11 +4,8 @@ name: Check pull request message format
 on:
   pull_request_target:
     branches:
-<<<<<<< HEAD:.github/workflows/chceck-pr-message.yml
-=======
       - current
       - circinus
->>>>>>> 43b2d3268 (T8100: updated pullrequest_target trigger branch filters updated):.github/workflows/check-pr-message.yml
       - sagitta
     types: [opened, synchronize, edited]
 
@@ -18,5 +15,5 @@ permissions:
 
 jobs:
   check-pr-title:
-    uses: vyos/.github/.github/workflows/check-pr-message.yml@sagitta
+    uses: vyos/.github/.github/workflows/check-pr-message.yml@current
     secrets: inherit

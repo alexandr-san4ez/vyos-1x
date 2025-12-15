@@ -2,38 +2,20 @@ name: "Perform CodeQL Analysis"
 
 on:
   push:
-<<<<<<< HEAD
-<<<<<<< HEAD
-    branches:
-      - sagitta
-=======
-    branches: [ "current", "circinus", "sagitta" ]
->>>>>>> 43b2d3268 (T8100: updated pullrequest_target trigger branch filters updated)
-=======
     branches:
       - current
       - circinus
       - sagitta
->>>>>>> ff175867e (T8100: updated pullrequest_target trigger branch filters updated)
     paths:
       - '**'
       - '!.github/**'
       - '!**/*.md'
   pull_request:
     # The branches below must be a subset of the branches above
-<<<<<<< HEAD
-<<<<<<< HEAD
-    branches:
-      - sagitta
-=======
-    branches: [ "current", "circinus", "sagitta" ]
->>>>>>> 43b2d3268 (T8100: updated pullrequest_target trigger branch filters updated)
-=======
     branches:
       - current
       - circinus
       - sagitta
->>>>>>> ff175867e (T8100: updated pullrequest_target trigger branch filters updated)
     paths:
       - '**'
       - '!.github/**'
@@ -49,7 +31,7 @@ permissions:
 
 jobs:
   codeql-analysis-call:
-    uses: vyos/.github/.github/workflows/codeql-analysis.yml@sagitta
+    uses: vyos/.github/.github/workflows/codeql-analysis.yml@current
     secrets: inherit
     with:
       languages: "['python']"

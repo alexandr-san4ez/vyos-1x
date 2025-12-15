@@ -2,16 +2,24 @@ name: "Perform CodeQL Analysis"
 
 on:
   push:
+<<<<<<< HEAD
     branches:
       - sagitta
+=======
+    branches: [ "current", "circinus", "sagitta" ]
+>>>>>>> 43b2d3268 (T8100: updated pullrequest_target trigger branch filters updated)
     paths:
       - '**'
       - '!.github/**'
       - '!**/*.md'
   pull_request:
     # The branches below must be a subset of the branches above
+<<<<<<< HEAD
     branches:
       - sagitta
+=======
+    branches: [ "current", "circinus", "sagitta" ]
+>>>>>>> 43b2d3268 (T8100: updated pullrequest_target trigger branch filters updated)
     paths:
       - '**'
       - '!.github/**'

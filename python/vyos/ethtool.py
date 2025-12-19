@@ -25,6 +25,10 @@ _drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront',
                                       'iavf', 'ice', 'i40e', 'hv_netvsc', 'veth', 'ixgbevf',
                                       'tun']
 
+_drivers_without_mac_change = ['ena']
+# enable interface bonding will change the interface MAC address, thus all drivers
+# not supporting MAC address change, also do not support bonding
+
 class Ethtool:
     """
     Class is used to retrive and cache information about an ethernet adapter
@@ -202,3 +206,7 @@ class Ethtool:
                              'flow-control settings!')
 
         return 'on' if bool(self._flow_control[0]['autonegotiate']) else 'off'
+
+    def check_mac_change(self) -> bool:
+        """ Check if ethernet drivers supports changing MAC address """
+        return bool(self.get_driver_name() not in _drivers_without_mac_change)

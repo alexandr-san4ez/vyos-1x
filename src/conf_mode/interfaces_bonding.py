@@ -29,6 +29,7 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.ethtool import Ethtool
 from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
 from vyos.template import render_to_string
@@ -239,6 +240,10 @@ def verify(bond):
                 if mtu < min_mtu:
                     raise ConfigError('Configured MTU is less then member '\
                                       f'interface "{interface}" minimum of {min_mtu}!')
+
+            # not all ethernet drivers support interface bonding
+            if not Ethtool(interface).check_bonding():
+                raise ConfigError(error_msg + 'driver is not supported!')
 
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:

@@ -347,7 +347,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['interface', interface])
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '1', 'action', 'permit'])
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '1', 'prefix', prefix_list_address])
-        
+
         # Commit main ISIS changes
         self.cli_commit()
 
@@ -430,7 +430,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify interface ISIS changes
-        tmp = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+        tmp = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
         self.assertIn(f' isis fast-reroute lfa level-1', tmp)
         self.assertIn(f' isis fast-reroute lfa level-1 exclude interface {interface}', tmp)
         self.assertIn(f' isis fast-reroute remote-lfa maximum-metric {rla_metric} level-1', tmp)
@@ -448,7 +448,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify interface ISIS changes
-        tmp = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+        tmp = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
         self.assertIn(f' isis fast-reroute ti-lfa level-1 node-protection link-fallback', tmp)
 
 if __name__ == '__main__':

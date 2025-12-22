@@ -16,6 +16,7 @@ import os
 import unittest
 import paramiko
 import pprint
+import re
 
 from time import sleep
 from typing import Type
@@ -26,6 +27,7 @@ from vyos import ConfigError
 from vyos.defaults import commit_lock
 from vyos.utils.process import cmd
 from vyos.utils.process import run
+from vyos.utils.process import rc_cmd
 
 save_config = '/tmp/vyos-smoketest-save'
 
@@ -102,27 +104,61 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
-        def getFRRconfig(self, string=None, end='$', endsection='^!',
-                         substring=None, endsubsection=None, daemon=''):
+        def getFRRconfig(self, start_section:str=None, end_marker='$', stop_section='^!',
+                         start_subsection:str=None, stop_subsection='^ exit', daemon=None) -> str:
             """
             Retrieve current "running configuration" from FRR
 
-            string:        search for a specific start string in the configuration
-            end:           end of the section to search for (line ending)
-            endsection:    end of the configuration
-            substring:     search section under the result found by string
-            endsubsection: end of the subsection (usually something with "exit")
+            start_section:    search for a specific start string in the configuration
+            end_marker:       override default "line end $" marker to match on an
+                              "open end" string
+            stop_section:     end of the configuration
+            start_subsection: search section under the result found by string
+            stop_subsection:  end of the subsection (usually something with "exit")
             """
-            command = f'vtysh -c "show run {daemon} no-header"'
-            if string:
-                command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
-                if substring and endsubsection:
-                    command += f' | sed -n "/^{substring}/,/{endsubsection}/p"'
-            out = cmd(command)
+            tmp = 'show running-config'
+            if daemon:
+                tmp = f'{tmp} {daemon}'
+            else:
+                tmp = f'{tmp} no-header'
+            rc, frr_config = rc_cmd(f'vtysh -c "{tmp}"')
+            self.assertEqual(rc, 0)
+
+            if not start_section:
+                return frr_config
+
+            extracted = []
+            in_section = False
+            for line in frr_config.splitlines():
+                if not in_section:
+                    if re.match(f'^{start_section}{end_marker}', line):
+                        in_section = True
+                        extracted.append(line)
+                else:
+                    extracted.append(line)
+                    if re.match(stop_section, line):
+                        break
+            output = '\n'.join(extracted)
+
+            # Use extracted list when searching for optional subsection
+            # used by e.g. BGP address-family check
+            if start_subsection:
+                extracted_subsection = []
+                in_subsection = False
+                for line in extracted:
+                    if not in_subsection:
+                        if re.match(start_subsection, line):
+                            in_subsection = True
+                            extracted_subsection.append(line)
+                    else:
+                        extracted_subsection.append(line)
+                        if re.match(stop_subsection, line):
+                            break
+                output = '\n'.join(extracted_subsection)
+
             if self.debug:
-                print(f'\n\ncommand "{command}" returned:\n')
-                pprint.pprint(out)
-            return out
+                print(output)
+            return output
 
         @staticmethod
         def ssh_send_cmd(command, username, password, hostname='localhost'):

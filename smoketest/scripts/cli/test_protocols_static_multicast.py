@@ -18,17 +18,14 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-
 base_path = ['protocols', 'static', 'multicast']
 
-
 class TestProtocolsStaticMulticast(VyOSUnitTestSHIM.TestCase):
-
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        mroute = self.getFRRconfig('ip mroute', end='')
+        mroute = self.getFRRconfig('ip mroute', end_marker='')
         self.assertFalse(mroute)
 
     def test_01_static_multicast(self):
@@ -39,11 +36,10 @@ class TestProtocolsStaticMulticast(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip mroute', end='')
+        frrconfig = self.getFRRconfig('ip mroute', end_marker='')
 
         self.assertIn('ip mroute 224.202.0.0/24 224.203.0.1', frrconfig)
         self.assertIn('ip mroute 224.203.0.0/24 eth0', frrconfig)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

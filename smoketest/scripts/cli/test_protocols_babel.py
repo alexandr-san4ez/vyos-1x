@@ -215,4 +215,4 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ipv6 distribute-list prefix {prefix_list_out6}-{interface} out {interface}', frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

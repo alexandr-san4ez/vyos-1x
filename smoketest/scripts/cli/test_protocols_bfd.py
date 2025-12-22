@@ -143,7 +143,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
+            peerconfig = self.getFRRconfig(f' peer {peer}', end_marker='', daemon=PROCESS_NAME)
 
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
@@ -206,7 +206,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         for profile, profile_config in profiles.items():
-            config = self.getFRRconfig(f' profile {profile}', endsection='^ !')
+            config = self.getFRRconfig(f' profile {profile}', stop_section='^ !')
             if 'echo_mode' in profile_config:
                 self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
@@ -228,7 +228,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertNotIn(f'shutdown', config)
 
         for peer, peer_config in peers.items():
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
+            peerconfig = self.getFRRconfig(f' peer {peer}', end_marker='', daemon=PROCESS_NAME)
             if 'profile' in peer_config:
                 self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 

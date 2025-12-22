@@ -1097,7 +1097,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router bgp {ASN}', frrconfig)
 
         for afi in ['ipv4', 'ipv6']:
-            afi_config = self.getFRRconfig(f' address-family {afi} unicast', endsection='exit-address-family', daemon='bgpd')
+            afi_config = self.getFRRconfig(f' address-family {afi} unicast', stop_section='exit-address-family', daemon='bgpd')
             self.assertIn(f'address-family {afi} unicast', afi_config)
             self.assertIn(f'  export vpn', afi_config)
             self.assertIn(f'  import vpn', afi_config)
@@ -1432,7 +1432,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                     else:
                         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit', substring=' address-family ipv4 unicast', endsubsection='^ exit-address-family')
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit', start_subsection=' address-family ipv4 unicast', stop_subsection='^ exit-address-family')
         neighbor_has_rr_client = [
             int_neighbors[0], int_neighbors[3],
             int_interfaces[0], int_interfaces[3],
@@ -1558,7 +1558,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         frrconfig = self.getFRRconfig(f'router bgp {ASN}',
-                                      endsection='^exit')
+                                      stop_section='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' address-family ipv4 unicast', frrconfig)
 
@@ -1567,7 +1567,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         frr_vrf_config = self.getFRRconfig(
-            f'router bgp {ASN} vrf {vrf}', endsection='^exit')
+            f'router bgp {ASN} vrf {vrf}', stop_section='^exit')
         self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
         self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
 

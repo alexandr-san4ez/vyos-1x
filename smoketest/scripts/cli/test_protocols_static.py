@@ -136,9 +136,9 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        v4route = self.getFRRconfig('ip route', end='')
+        v4route = self.getFRRconfig('ip route', end_marker='')
         self.assertFalse(v4route)
-        v6route = self.getFRRconfig('ipv6 route', end='')
+        v6route = self.getFRRconfig('ipv6 route', end_marker='')
         self.assertFalse(v6route)
 
     def test_01_static(self):
@@ -203,7 +203,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip route', end='')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
 
         # Verify routes
         for route, route_config in routes.items():
@@ -314,7 +314,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip route', end='')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
 
         for table in tables:
             # Verify routes
@@ -544,7 +544,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.assertIsNotNone(router, 'DHCP router should be available')
 
         # Verify FRR configuration contains the static routes with DHCP router
-        frrconfig = self.getFRRconfig('ip route', end='')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
 
         for route in dhcp_routes.keys():
             expected_route = f'ip route {route} {router} {dhcp_interface}'
@@ -562,7 +562,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify table route in FRR config
-        frrconfig = self.getFRRconfig('ip route', end='')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
         expected_table_route = (
             f'ip route {table_route} {router} {dhcp_interface} table {table_id}'
         )

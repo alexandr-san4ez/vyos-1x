@@ -26,7 +26,9 @@ from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.defaults import SSH_DSA_DEPRECATION_WARNING
+from vyos.utils.dict import dict_search
 from vyos.utils.process import call
+from vyos.utils.process import rc_cmd
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -42,6 +44,8 @@ key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
 
 login_motd_dsa_warning = r'/run/motd.d/91-vyos-ssh-dsa-deprecation-warning'
+cipher_rijndael_cbd = 'rijndael-cbc@lysator.liu.se'
+cipher_aes256_cbc = 'aes256-cbc'
 
 # As of OpenSSH 9.8p1 in Debian trixie, DSA keys are no longer supported
 deprecated_algos = ['ssh-dss', 'ssh-dss-cert-v01@openssh.com']
@@ -87,6 +91,11 @@ def verify(ssh):
         tmp = [algo for algo in ssh['hostkey_algorithm'] if algo in deprecated_algos]
         if tmp: DeprecationWarning(f'{SSH_DSA_DEPRECATION_WARNING} {", ".join(tmp)}')
 
+    if 'ciphers' in ssh and cipher_rijndael_cbd in ssh['ciphers']:
+        DeprecationWarning(f'Support for {cipher_rijndael_cbd} (a pre-standard name '\
+                           f'for {cipher_aes256_cbc}) will be removed in VyOS 1.5; ' \
+                           f'internal usage has moved to {cipher_aes256_cbc}.')
+
     verify_vrf(ssh)
     return None
 
@@ -108,6 +117,13 @@ def generate(ssh):
     if not os.path.isfile(key_ed25519):
         syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
+
+    # T8098: use aes256-cbc over rijndael-cbc@lysator.liu.se
+    ciphers = dict_search('ciphers', ssh)
+    if ciphers and cipher_rijndael_cbd in ciphers:
+        ssh['ciphers'].remove(cipher_rijndael_cbd)
+        if cipher_aes256_cbc not in ciphers:
+            ssh['ciphers'].append(cipher_aes256_cbc)
 
     render(config_file, 'ssh/sshd_config.j2', ssh)
 
@@ -132,6 +148,11 @@ def apply(ssh):
         call(f'systemctl stop ssh@*.service')
         call(f'systemctl stop {systemd_service_sshguard}')
         return None
+
+    # Verify generated sshd configuration is correct
+    rc, out = rc_cmd(f'/usr/sbin/sshd -t -f {config_file}')
+    if rc:
+        raise ConfigError(f'Unexpected error with SSH configuration! {out}')
 
     if 'dynamic_protection' not in ssh:
         call(f'systemctl stop {systemd_service_sshguard}')

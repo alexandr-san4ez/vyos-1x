@@ -594,7 +594,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf', endsection='^exit')
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} {area_type} translate-never no-summary', frrconfig)
         self.assertIn(f' network {network} area {area}', frrconfig)

@@ -176,11 +176,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make ${{ needs.set_config.outputs.test_cli_command }} && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make ${{ needs.set_config.outputs.test_cli_command }}; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   test_smoketest_cli_vpp:
@@ -210,11 +210,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make test-vpp && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make test-vpp; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   test_interfaces_cli:
@@ -243,11 +243,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make test-interfaces && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make test-interfaces; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   test_config_load:
@@ -276,11 +276,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make testc && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make testc; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   test_config_load_vpp:
@@ -310,11 +310,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make testcvpp && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make testcvpp; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   test_raid1_install:
@@ -343,11 +343,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make testraid && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make testraid; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   test_encrypted_config_tpm:
@@ -377,11 +377,11 @@ jobs:
         id: test
         shell: bash
         run: |
-          sudo make testtpm && EXIT_CODE=0 || EXIT_CODE=$?
-          if [[ $EXIT_CODE == 0 ]]; then
+          if sudo make testtpm; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
   result:

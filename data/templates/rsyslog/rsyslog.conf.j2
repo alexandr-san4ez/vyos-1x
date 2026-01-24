@@ -15,7 +15,7 @@ $LocalHostName {{ global.local_host_name }}
 {% endif %}
 
 # We always log to /var/log/messages
-$outchannel global,/var/log/messages,262144,/usr/sbin/logrotate {{ logrotate }}
+$outchannel global,/var/log/messages,{{ logrotate_size_limit }},/usr/sbin/logrotate {{ logrotate }}
 {% if global.facility is vyos_defined %}
 {%     set tmp = [] %}
 {%     for facility, facility_options in global.facility.items() %}

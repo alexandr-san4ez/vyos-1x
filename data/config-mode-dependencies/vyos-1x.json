@@ -72,5 +72,8 @@
     "system_option": {
         "ip_ipv6": ["system_ip", "system_ipv6"],
         "sysctl": ["system_sysctl"]
+    },
+    "system_logs": {
+        "syslog": ["system_syslog"]
     }
 }

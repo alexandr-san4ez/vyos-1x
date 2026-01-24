@@ -40,7 +40,8 @@ airbag.enable()
 
 cert_dir = '/etc/rsyslog.d/certs'
 rsyslog_conf = '/etc/rsyslog.d/00-vyos.conf'
-logrotate_conf = '/etc/logrotate.d/vyos-rsyslog'
+logrotate_user_conf = '/etc/logrotate.d/vyos-rsyslog-user'
+logrotate_messages_conf = '/etc/logrotate.d/vyos-rsyslog'
 systemd_override = r'/run/systemd/system/rsyslog.service.d/override.conf'
 
 
@@ -122,7 +123,16 @@ def get_config(config=None):
         with_pki=True,
     )
 
-    syslog.update({ 'logrotate' : logrotate_conf })
+    syslog.update({ 'logrotate' : logrotate_messages_conf })
+
+    logs_config = conf.get_config_dict(
+        ['system', 'logs'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        with_recursive_defaults=True,
+    )
+    max_size_mb = dict_search('logrotate.messages.max_size', logs_config)
+    syslog['logrotate_size_limit'] = int(max_size_mb) * 1024 * 1024
 
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: syslog.update({'restart_required': {}})
@@ -190,8 +200,8 @@ def generate(syslog):
     if not syslog:
         if os.path.exists(rsyslog_conf):
             os.unlink(rsyslog_conf)
-        if os.path.exists(logrotate_conf):
-            os.unlink(logrotate_conf)
+        if os.path.exists(logrotate_user_conf):
+            os.unlink(logrotate_user_conf)
 
         return None
 
@@ -202,7 +212,7 @@ def generate(syslog):
 
     render(rsyslog_conf, 'rsyslog/rsyslog.conf.j2', syslog)
     render(systemd_override, 'rsyslog/override.conf.j2', syslog)
-    render(logrotate_conf, 'rsyslog/logrotate.j2', syslog)
+    render(logrotate_user_conf, 'rsyslog/logrotate.j2', syslog)
 
     # Reload systemd manager configuration
     call('systemctl daemon-reload')

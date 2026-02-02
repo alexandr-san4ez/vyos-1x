@@ -84,6 +84,22 @@ def from_file(config_file_name=DEFAULT_CONFIG_PATH, vintage='vyos'):
     # no version information
     return {}
 
+def release_version_from_file(config_file_name=DEFAULT_CONFIG_PATH):
+    """
+    Get release version from config file.
+    Note that this returns the empty string on files of the old 'vyatta'
+    syntax; internal use only applies after conversion to modern syntax.
+    """
+    REGEX_RELEASE_VERSION_VYOS = r'// Release version:\s+(\S*)\s*'
+
+    with open(config_file_name) as f:
+        res = re.search(REGEX_RELEASE_VERSION_VYOS, f.read())
+
+    if res is None:
+        return ""
+
+    return res.group(1)
+
 def from_system():
     """
     Get system component version dict.

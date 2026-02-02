@@ -21,6 +21,7 @@ import logging
 import vyos.defaults
 import vyos.component_version as component_version
 from vyos.utils.process import cmd
+from vyos.version import get_version
 
 log_file = os.path.join(vyos.defaults.directories['config'], 'vyos-migrate.log')
 
@@ -196,6 +197,10 @@ class Migrator(object):
         if self.update_vintage():
             self._changed = True
 
+        file_release_version = component_version.release_version_from_file()
+        if not file_release_version or file_release_version != get_version():
+            self._changed = True
+
         if not self._changed:
             return
 
@@ -223,4 +228,3 @@ class VirtualMigrator(Migrator):
         component_version.remove_footer(cfg_file)
 
         self.write_config_file_versions(cfg_versions)
-

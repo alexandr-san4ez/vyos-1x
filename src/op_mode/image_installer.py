@@ -249,12 +249,18 @@ def search_previous_installation(disks: list[str]) -> None:
 
     print('Searching for data from previous installations')
     image_data = []
+    legacy_bind_mount = False
     for disk_name in disks:
         for partition in disk.partition_list(disk_name):
             if disk.partition_mount(partition, mnt_tmp):
                 if Path(mnt_tmp + '/boot').exists():
                     for path in Path(mnt_tmp + '/boot').iterdir():
-                        if path.joinpath('rw/opt/vyatta/etc/config/.vyatta_config').exists():
+                        if path.joinpath('rw/config/.vyatta_config').exists():
+                            legacy_bind_mount = True
+                            image_data.append((path.name, partition))
+                        elif path.joinpath(
+                            'rw/opt/vyatta/etc/config/.vyatta_config'
+                        ).exists():
                             image_data.append((path.name, partition))
 
                 disk.partition_umount(partition)
@@ -281,7 +287,13 @@ def search_previous_installation(disks: list[str]) -> None:
 
     disk.partition_mount(image_drive, mnt_tmp)
 
-    copytree(f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config)
+    if legacy_bind_mount:
+        copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+    else:
+        copytree(
+            f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config
+        )
+
     Path(mnt_ssh).mkdir()
     host_keys: list[str] = glob(f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*')
     for host_key in host_keys:

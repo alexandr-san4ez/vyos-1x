@@ -254,7 +254,7 @@ def search_previous_installation(disks: list[str]) -> None:
             if disk.partition_mount(partition, mnt_tmp):
                 if Path(mnt_tmp + '/boot').exists():
                     for path in Path(mnt_tmp + '/boot').iterdir():
-                        if path.joinpath('rw/config/.vyatta_config').exists():
+                        if path.joinpath('rw/opt/vyatta/etc/config/.vyatta_config').exists():
                             image_data.append((path.name, partition))
 
                 disk.partition_umount(partition)
@@ -281,7 +281,7 @@ def search_previous_installation(disks: list[str]) -> None:
 
     disk.partition_mount(image_drive, mnt_tmp)
 
-    copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+    copytree(f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config)
     Path(mnt_ssh).mkdir()
     host_keys: list[str] = glob(f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*')
     for host_key in host_keys:

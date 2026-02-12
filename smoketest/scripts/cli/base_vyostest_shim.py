@@ -91,6 +91,11 @@ class VyOSUnitTestSHIM:
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
 
+        def cli_save(self, file):
+            if self.debug:
+                print('save')
+            self._session.save_config(file)
+
         def op_mode(self, path : list) -> None:
             """
             Execute OP-mode command and return stdout

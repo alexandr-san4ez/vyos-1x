@@ -30,6 +30,7 @@ RSYSLOG_CONF = '/etc/rsyslog.d/00-vyos.conf'
 CERT_DIR = '/etc/rsyslog.d/certs'
 
 base_path = ['system', 'syslog']
+base_logs_path = ['system', 'logs']
 pki_base = ['pki']
 
 dummy_interface = 'dum372874'
@@ -137,6 +138,12 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
     def test_syslog_global(self):
         hostname = 'vyos123'
         domainname = 'example.local'
+
+        default_rsyslog_max_size = default_value(
+            base_logs_path + ['logrotate', 'messages', 'max-size']
+        )
+        size_limit = int(default_rsyslog_max_size) * 1024 * 1024
+
         self.cli_set(['system', 'host-name', hostname])
         self.cli_set(['system', 'domain-name', domainname])
         self.cli_set(base_path + ['global', 'marker', 'interval', '600'])
@@ -151,6 +158,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             '$PreserveFQDN on',
             'kern.err',
             f'$LocalHostName {hostname}.{domainname}',
+            f'$outchannel global,/var/log/messages,{size_limit},/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog',
         ]
 
         for e in expected:

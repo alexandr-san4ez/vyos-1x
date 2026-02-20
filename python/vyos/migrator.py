@@ -197,7 +197,7 @@ class Migrator(object):
         if self.update_vintage():
             self._changed = True
 
-        file_release_version = component_version.release_version_from_file()
+        file_release_version = component_version.release_version_from_file(cfg_file)
         if not file_release_version or file_release_version != get_version():
             self._changed = True
 

@@ -46,6 +46,10 @@ internal_ports = {
     'certbot_haproxy' : 65080, # Certbot running behing haproxy
 }
 
+config_files = {
+    'igmp_proxy' : '/run/igmpproxy/igmpproxy.conf',
+}
+
 config_status = '/tmp/vyos-config-status'
 api_config_state = '/run/http-api-state'
 

@@ -12,6 +12,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import jmespath
+
 from json import loads
 from netifaces import AF_INET
 from netifaces import AF_INET6
@@ -45,9 +47,9 @@ dhcp6c_process_name = 'dhcp6c'
 
 MSG_TESTCASE_UNSUPPORTED = 'unsupported on interface family'
 
-def is_mirrored_to(interface, mirror_if, qdisc):
+def is_mirrored_to(interface, mirror_if, qdisc) -> bool:
     """
-    Ask TC if we are mirroring traffic to a discrete interface.
+    Ask tc(8) if we are mirroring traffic to a specific interface.
 
     interface: source interface
     mirror_if: destination where we mirror our data to
@@ -56,12 +58,11 @@ def is_mirrored_to(interface, mirror_if, qdisc):
     if qdisc not in ['ffff', '1']:
         raise ValueError()
 
-    ret_val = False
-    tmp = cmd(f'tc -s -p filter ls dev {interface} parent {qdisc}: | grep mirred')
-    tmp = tmp.lower()
-    if mirror_if in tmp:
-        ret_val = True
-    return ret_val
+    tmp = loads(cmd(f'tc -json filter ls dev {interface} parent {qdisc}:'))
+    # the following syntax looks odd but we need to filter out the first
+    # result sets from tc which do not have "options.actions...".
+    tmp = jmespath.search("[?options.actions[0].kind=='mirred'].options.actions[0].{mirred_action: mirred_action, to_dev: to_dev} | [0]", tmp)
+    return bool(dict_search('mirred_action', tmp) == 'mirror' and dict_search('to_dev', tmp) == mirror_if)
 
 class BasicInterfaceTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
@@ -84,7 +85,7 @@ class BasicInterfaceTest:
         _test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
                       '2001:db8:1::ffff/64', '2001:db8:101::1/112']
 
-        _mirror_interfaces = []
+        _mirror_interfaces = ['dum21354']
         # choose IPv6 minimum MTU value for tests - this must always work
         _mtu = '1280'
 
@@ -103,6 +104,7 @@ class BasicInterfaceTest:
             cls._test_ipv6_pd = cli_defined(cls._base_path + ['dhcpv6-options'], 'pd')
             cls._test_mtu = cli_defined(cls._base_path, 'mtu')
             cls._test_vrf = cli_defined(cls._base_path, 'vrf')
+            cls._test_mirror = cli_defined(cls._base_path, 'mirror')
 
             # Setup mirror interfaces for SPAN (Switch Port Analyzer)
             for span in cls._mirror_interfaces:
@@ -375,8 +377,12 @@ class BasicInterfaceTest:
                 self.cli_set(self._base_path + [interface, 'description', 'test_add_to_invalid_vrf'])
 
         def test_span_mirror(self):
-            if not self._mirror_interfaces:
+            if not self._test_mirror:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
+
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
 
             # Check the two-way mirror rules of ingress and egress
             for mirror in self._mirror_interfaces:
@@ -391,6 +397,18 @@ class BasicInterfaceTest:
                 for interface in self._interfaces:
                     self.assertTrue(is_mirrored_to(interface, mirror, 'ffff'))
                     self.assertTrue(is_mirrored_to(interface, mirror, '1'))
+
+            # delete interface mirror - check that configuration from tc is removed
+            for mirror in self._mirror_interfaces:
+                for interface in self._interfaces:
+                    self.cli_delete(self._base_path + [interface, 'mirror'])
+            self.cli_commit()
+
+            # Verify config
+            for mirror in self._mirror_interfaces:
+                for interface in self._interfaces:
+                    self.assertFalse(is_mirrored_to(interface, mirror, 'ffff'))
+                    self.assertFalse(is_mirrored_to(interface, mirror, '1'))
 
         def test_interface_disable(self):
             # Check if description can be added to interface and

@@ -34,7 +34,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._base_path = ['interfaces', 'bridge']
-        cls._mirror_interfaces = ['dum21354']
         cls._members = []
 
         # we need to filter out VLAN interfaces identified by a dot (.)

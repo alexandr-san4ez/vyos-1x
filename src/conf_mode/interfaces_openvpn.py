@@ -311,6 +311,12 @@ def verify(openvpn):
             if dict_search('remote_host', openvpn) in dict_search('remote_address', openvpn):
                 raise ConfigError('"remote-address" and "remote-host" can not be the same')
 
+            cipher_list = dict_search('encryption.cipher', openvpn)
+            if not cipher_list or cipher_list in ['bf128', 'bf256']:
+                DeprecationWarning('OpenVPN default data-channel ciphers will change in VyOS 1.5; '\
+                                   'the implicit "BF-CBC" is no longer supported. It is highly '\
+                                   'recommended to reconcile ciphersuites!')
+
         if openvpn['device_type'] == 'tap' and 'local_address' in openvpn:
             # we can only have one local_address, this is ensured above
             v4addr = None

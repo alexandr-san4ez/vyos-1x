@@ -72,6 +72,8 @@ init_bootfile () {
         else
             $vyos_libexec_dir/system-versions-foot.py > $BOOTFILE
         fi
+    fi
+    if [ -f $BOOTFILE ] ; then
         chgrp ${GROUP} $BOOTFILE
         chmod 660 $BOOTFILE
     fi

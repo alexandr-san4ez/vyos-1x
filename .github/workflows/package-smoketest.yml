@@ -46,6 +46,7 @@ jobs:
       test_tpm_tests: ${{ steps.config.outputs.test_tpm_tests }}
       test_vpp: ${{ steps.config.outputs.test_vpp }}
       test_vpp_runner: ${{ steps.config.outputs.test_vpp_runner }}
+      smoketests_runner: ${{ steps.config.outputs.smoketests_runner }}
       install_build_deps: ${{ steps.config.outputs.install_build_deps }}
       mirror_enabled: ${{ steps.config.outputs.mirror_enabled }}
     steps:
@@ -79,6 +80,7 @@ jobs:
           echo "test_tpm_tests=$(echo $CONFIG | jq -r .test_tpm_tests)" >> $GITHUB_OUTPUT
           echo "test_vpp=$(echo $CONFIG | jq -r .test_vpp)" >> $GITHUB_OUTPUT
           echo "test_vpp_runner=$(echo $CONFIG | jq -c .test_vpp_runner)" >> $GITHUB_OUTPUT
+          echo "smoketests_runner=$(echo $CONFIG | jq -c .smoketests_runner)" >> $GITHUB_OUTPUT
           echo "install_build_deps=$(echo $CONFIG | jq -r .install_build_deps)" >> $GITHUB_OUTPUT
           echo "mirror_enabled=$(echo $CONFIG | jq -r .mirror_enabled)" >> $GITHUB_OUTPUT
 
@@ -153,7 +155,7 @@ jobs:
 
   test_smoketest_cli:
     needs: [build_iso, set_config]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJson(needs.set_config.outputs.smoketests_runner) }}
     timeout-minutes: 180
     container:
       image: ${{ needs.set_config.outputs.container_image }}
@@ -220,7 +222,7 @@ jobs:
 
   test_interfaces_cli:
     needs: [build_iso, set_config]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJson(needs.set_config.outputs.smoketests_runner) }}
     timeout-minutes: 180
     container:
       image: ${{ needs.set_config.outputs.container_image }}
@@ -253,7 +255,7 @@ jobs:
 
   test_config_load:
     needs: [build_iso, set_config]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJson(needs.set_config.outputs.smoketests_runner) }}
     timeout-minutes: 90
     container:
       image: ${{ needs.set_config.outputs.container_image }}

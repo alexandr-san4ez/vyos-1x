@@ -1516,7 +1516,7 @@ class Interface(Control):
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
-        source_if = self.config['ifname']
+        source_if = self.ifname
 
         mirror_config = None
         if 'mirror' in self.config:
@@ -1529,9 +1529,9 @@ class Interface(Control):
 
         # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
         # qdisc on specified device") - we simply cleanup all stuff here
-        if not 'traffic_policy' in self.config:
-            self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
-            self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
+        if not 'qos' in self.config:
+            self._popen(f'tc qdisc del dev {source_if} root 2>/dev/null')
+            self._popen(f'tc qdisc del dev {source_if} ingress 2>/dev/null')
 
         # Apply interface mirror policy
         if mirror_config:
@@ -1543,14 +1543,14 @@ class Interface(Control):
                     handle = '1: root prio'
                     parent = '1:'
 
-                # Mirror egress traffic
+                # Mirror traffic
                 mirror_cmd  = f'tc qdisc add dev {source_if} handle {handle}; '
                 # Export the mirrored traffic to the interface
                 mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol '\
                               f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
                               f'egress mirror dev {target_if}'
                 _, err = self._popen(mirror_cmd)
-                if err: print('tc qdisc(filter for mirror port failed')
+                if err: print('tc filter for mirror port failed')
 
         # Apply interface traffic redirection policy
         elif 'redirect' in self.config:
@@ -1561,7 +1561,7 @@ class Interface(Control):
             _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
                                  f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
                                  f'egress redirect dev {target_if}')
-            if err: print('tc filter add for redirect failed')
+            if err: print('tc filter for redirect failed')
 
     def set_per_client_thread(self, enable):
         """

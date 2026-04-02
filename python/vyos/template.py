@@ -904,3 +904,12 @@ def get_default_port(service):
         raise RuntimeError(f'Service "{service}" not found in internal ' \
                            'vyos.defaults.internal_ports dict!')
     return internal_ports[service]
+
+
+@register_filter('parse_url')
+def parse_url(url):
+    """Parse the given URL and return a urllib.parse.ParseResult object"""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    return parsed

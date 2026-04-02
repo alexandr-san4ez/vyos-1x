@@ -98,7 +98,8 @@ def apply(sr):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'^segment-routing')
+    frr_cfg.modify_section(f'^segment-routing', stop_pattern='^exit', remove_stop_mark=True)
+
     if 'new_frr_config' in sr:
         frr_cfg.add_before(frr.default_add_before, sr['new_frr_config'])
     frr_cfg.commit_configuration(zebra_daemon)

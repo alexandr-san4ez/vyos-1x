@@ -17,6 +17,8 @@
 import os
 import re
 import sys
+import time
+import pyroute2
 import vyos.ipsec
 
 from json import loads
@@ -27,6 +29,20 @@ from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 
 NHRP_CONFIG: str = '/run/opennhrp/opennhrp.conf'
+NHRP_ADMIN_SOCKET: str = '/run/opennhrp.socket'
+
+
+def opennhrpctl(command: str):
+    """
+    Execute command on OpenNHRP admin socket
+
+    Args:
+        command (str): a command/argument for opennhrpctl
+
+    Returns:
+        str: returns the stdout of opennhrpctl command
+    """
+    return cmd(f'sudo opennhrpctl -a {NHRP_ADMIN_SOCKET} {command}')
 
 
 def vici_get_ipsec_uniqueid(conn: str, src_nbma: str,
@@ -219,6 +235,51 @@ def iface_up(interface: str) -> None:
         logger.error(
             f'Unable to flush route on interface "{interface}": {err}')
 
+def wait_for_src_nbma(dest_nbma: str, delay_sec: int = 1, max_attempts: int = 10) -> bool:
+    """Wait until the kernel can resolve a preferred source address for 'dest_nbma'.
+
+    During boot, OpenNHRP may emit peer-up before the tunnel source interface has
+    finished obtaining its DHCP address. In that state NHRP_SRCNBMA is still
+    missing, but a route lookup toward the remote NBMA can later expose the
+    local preferred source address once the interface becomes usable.
+
+    It based on implementation 'kernel_route' in opennhrp lib:
+      - https://github.com/ibazzi/opennhrp/blob/master/nhrp/sysdep_netlink.c#L1004-L1076
+
+    Returns:
+        bool: True if a source NBMA address became available, False otherwise.
+    """
+    with pyroute2.IPRoute() as ipr:
+        for attempt in range(1, max_attempts + 1):
+            error_message = ''
+            try:
+                routes = ipr.route('get', dst=dest_nbma)
+            except pyroute2.netlink.NetlinkError as e:
+                error_message = f'Netlink error while resolving source NBMA: {e}'
+            else:
+                if routes:
+                    attrs = dict(routes[0].get('attrs', []))
+                    src_nbma = attrs.get('RTA_PREFSRC')
+
+                    if src_nbma:
+                        logger.info(
+                            'Local NBMA address became available after '
+                            f'{attempt} attempt(s): {src_nbma}'
+                        )
+                        return True
+            logger.info(
+                'Local NBMA address not ready yet '
+                f'(attempt {attempt}/{max_attempts}). {error_message}'
+            )
+            if attempt < max_attempts:
+                time.sleep(delay_sec)
+
+    logger.error(
+        'Local NBMA address is still unavailable after '
+        f'{max_attempts} attempt(s)'
+    )
+    return False
+
 
 def peer_up(dmvpn_type: str, conn: str) -> None:
     """Proceed NHRP peer UP event
@@ -228,9 +289,36 @@ def peer_up(dmvpn_type: str, conn: str) -> None:
         conn (str): an IKE profile name
     """
     logger.info(f'Peer UP event for {dmvpn_type} using IKE profile {conn}')
+
     src_nbma = os.getenv('NHRP_SRCNBMA')
     dest_nbma = os.getenv('NHRP_DESTNBMA')
     dest_mtu = os.getenv('NHRP_DESTMTU')
+    interface = os.getenv('NHRP_INTERFACE')
+    down_reason = os.getenv('NHRP_PEER_DOWN_REASON')
+
+    # On boot, peer-up can arrive before the tunnel source interface has a
+    # usable local NBMA address, for example while DHCP is still settling.
+    # In that state the destination NBMA may already be known, but IPsec
+    # initiation cannot continue without a local source address.
+    #
+    # Waiting briefly helps when the interface is only slightly behind. If the
+    # event still arrived too early, force OpenNHRP to move the peer to
+    # 'lower-down' so it emits peer-up again once the interface is fully ready.
+    if interface and not src_nbma and dest_nbma:
+        # Do not repeat the same recovery for an event that was already caused
+        # by a 'lower-down' transition, otherwise the handler can loop forever.
+        if down_reason != 'lower-down':
+            logger.warning(
+                'Can not retrieve local NHRP NBMA address because '
+                f'interface {interface} is not ready'
+            )
+
+            if wait_for_src_nbma(dest_nbma):
+                logger.info(
+                    'Forcing OpenNHRP to retry peer-up after interface readiness changes'
+                )
+                opennhrpctl(f'cache lowerdown interface {interface}')
+                return
 
     if not src_nbma or not dest_nbma:
         logger.error(
